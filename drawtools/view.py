@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import Canvas, Button, Entry, font as tkfont
 from controller import drawcontrol as ctrl
-from command.command import InsertCommand, RemoveCommand
+from command.bst_command import BSTInsertCommand, BSTRemoveCommand
 from collections import deque
 from textwrap import wrap
 
@@ -57,6 +57,9 @@ class Console(Canvas):
         self.font.configure(size=min(new_font_size_x, new_font_size_y))
 
     def add_command(self, command_text):
+        """Adds a line of text to console history.
+            Note that this is a string and not the actual command objects,
+            so may include things like 'syntax error'"""
         self.console_history.appendleft(command_text)
         self.redraw()
 
@@ -228,17 +231,24 @@ class DrawApp(tk.Frame):
         """
         command_text = self.command_input.get()
 
-        # pass command to control object for parsing and execution
-        # command_obj = self.control.parse_command(command_text)
-        # self.control.do_command(command_obj)
-
         # clear contents and add it to console
         self.command_input.delete(0, 'end')
         self.console.add_command(command_text)
 
+        # pass command to control object for parsing and execution
+        command_obj = self.control.parse_command(command_text)
+
+        # command parsing process returns None for syntax errors
+        if command_obj:
+            self.control.do_command(command_obj)
+        else:
+            command_text = "Syntax error for '%s'" % command_text
+
+
+
     def ins_button_clicked(self):
         value = int(self.insert_input.get())
-        command = InsertCommand(self.ds, value, change_color=True)
+        command = BSTInsertCommand(self.ds, value, change_color=True)
 
         self.control.do_command(command)
 
@@ -247,5 +257,5 @@ class DrawApp(tk.Frame):
             value = int(self.remove_input.get())
         except ValueError:
             value = self.ds.root.val
-        command = RemoveCommand(self.ds, value, change_color=True)
+        command = BSTRemoveCommand(self.ds, value, change_color=True)
         self.control.do_command(command)
