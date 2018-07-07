@@ -1,10 +1,11 @@
 
 
-class InsertCommand:
 
-    def __init__(self, receiver, value, should_redraw=True, change_color=False):
+class BSTInsertCommand:
+
+    def __init__(self, receiver, value, should_redraw=True, change_color=True):
         self.receiver = receiver
-        self.value = value
+        self.value = int(value)
         self.should_redraw = should_redraw
         self.change_color = change_color
 
@@ -23,11 +24,11 @@ class InsertCommand:
         return "INSERT %s" % self.value
 
 
-class RemoveCommand:
+class BSTRemoveCommand:
 
-    def __init__(self, receiver, value, should_redraw=True, change_color=False):
+    def __init__(self, receiver, value, should_redraw=True, change_color=True):
         self.receiver = receiver
-        self.value = value
+        self.value = int(value)
         self.should_redraw = should_redraw
         self.change_color = change_color
 
