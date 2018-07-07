@@ -231,18 +231,19 @@ class DrawApp(tk.Frame):
         """
         command_text = self.command_input.get()
 
-        # clear contents and add it to console
-        self.command_input.delete(0, 'end')
-        self.console.add_command(command_text)
-
         # pass command to control object for parsing and execution
         command_obj = self.control.parse_command(command_text)
 
         # command parsing process returns None for syntax errors
+        command_text = command_text if command_obj else "Syntax error for '%s'" % command_text
+
+        # clear contents and add it to console
+        self.command_input.delete(0, 'end')
+        self.console.add_command(command_text)
+
+        # don't execute in case of syntax error
         if command_obj:
             self.control.do_command(command_obj)
-        else:
-            command_text = "Syntax error for '%s'" % command_text
 
 
 
