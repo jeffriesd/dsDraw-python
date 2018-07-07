@@ -59,6 +59,22 @@ class DrawControl:
         with open('../logs/control_log.log', 'w'):
             pass
 
+    def parse_command(self, command_text):
+        """Parses a command with the first argument being
+            the command type e.g. 'insert', 'delete', 'clear'
+            and the rest being arguments to the respective command"""
+        spl = command_text.split(" ")
+        command_type = spl[0]
+        args = spl[1:]
+
+        # get command factory and use it to instantiate parsed command
+        my_command_factory = self.model.get_command_factory()
+        my_command = my_command_factory.create_command(command_type, *args)
+
+        return my_command
+
+
+
     def do_command(self, command):
         """Pass in a command which has been initialized with a receiver.
             Perform command by calling command.execute() and redraw the canvas
