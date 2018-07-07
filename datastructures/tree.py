@@ -5,7 +5,7 @@ import math
 from copy import copy
 import logging
 from time import sleep
-
+from command.command_factory import BSTCommandFactory
 
 
 class TreeNode:
@@ -261,6 +261,10 @@ class BST:
         except AttributeError:
             pass
             # print("no logger ; message was %s" % message)
+
+    def get_command_factory(self):
+        """Return appropriate command factory for BST"""
+        return BSTCommandFactory(self)
 
     def insert(self, el, change_color=False):
         """
