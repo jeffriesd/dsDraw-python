@@ -177,6 +177,7 @@ class DrawApp(tk.Frame):
                                    font=self.mono_font)
         self.command_input.place(relwidth=0.25, relheight=0.05, relx=0.05, rely=0.8)
         self.command_input.bind("<Return>", self.command_entered)
+        self.command_input.bind("<Up>", self.show_last_command)
 
 
         self.insert_button = Button(self, bg="#333", fg="white", text="Insert", command=self.ins_button_clicked)
@@ -223,11 +224,19 @@ class DrawApp(tk.Frame):
     def clear_canvas(self):
         self.canvas.delete("all")
 
+    def show_last_command(self, event):
+        """Function to support quick redoing of last command by
+            putting it back into the console Entry.
+            Bound to up arrow key by default"""
+        last_command = self.console.console_history[0]
+        self.command_input.insert(0, last_command)
+
+
     def command_entered(self, event):
         """
         Command entered into input, so parse it,
         show it in console and clear the current input.
-        Also add it to the command history.
+        Then pass it to control for execution and add it to the console history.
         """
         command_text = self.command_input.get()
 

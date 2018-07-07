@@ -73,8 +73,6 @@ class DrawControl:
 
         return my_command
 
-
-
     def do_command(self, command):
         """Pass in a command which has been initialized with a receiver.
             Perform command by calling command.execute() and redraw the canvas
