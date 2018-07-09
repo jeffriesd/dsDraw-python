@@ -1,5 +1,5 @@
 
-class ClearConsoleCommand:
+class ClearConsoleCommand(object):
     def __init__(self, receiver, should_redraw=False):
         """
         Command class for Control object. Created by a ControlCommandFactory and passed to
@@ -18,3 +18,7 @@ class ClearConsoleCommand:
 
     def __repr__(self):
         return "Clearing canvas."
+
+
+class CreateVariableCommand(object):
+    pass

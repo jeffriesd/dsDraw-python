@@ -71,10 +71,10 @@ class DrawControl:
             the command type e.g. 'insert', 'delete', 'clear'
             and the rest being arguments to the respective command.
 
-            Assume receiver is model unless '?' present as first character,
+            Assume receiver is model unless '/' present as first character,
             in which case it's a command for the control object"""
         # handle control-command special case
-        if command_text[0] == "?":
+        if command_text[0] == "/":
             my_command_factory = ControlCommandFactory(self)
             command_text = command_text[1:]
 
