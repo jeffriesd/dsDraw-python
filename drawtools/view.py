@@ -83,10 +83,16 @@ class Console(Canvas):
 
         self.font.configure(size=min(new_font_size_x, new_font_size_y))
 
-    def clear_input(self):
+    def clear_input(self, event=None):
         self.input.delete(0, "end")
 
-    def previous_command(self, event):
+    def clear_console(self, event=None):
+        self.delete("all")
+        # calling clear on deque, but command history still exists
+        # for cycling with arrow keys
+        self.console_history.clear()
+
+    def previous_command(self, event=None):
         """Function to support quick cycling of last command by
             putting it back into the console Entry.
             Bound to up arrow key by default"""
@@ -98,7 +104,7 @@ class Console(Canvas):
         self.clear_input()
         self.input.insert(0, last_command)
 
-    def next_command(self, event):
+    def next_command(self, event=None):
         """Function to support quick cycling of commands in
             the forwards direction. Bound to down arrow key
             by default. If 'bottom' is hit and arrow key pressed
@@ -250,6 +256,7 @@ class DrawApp(tk.Frame):
         # bind up/down arrow keys to console action
         self.console_input.bind("<Up>", self.console.previous_command)
         self.console_input.bind("<Down>", self.console.next_command)
+        self.console_input.bind("<Control-c>", self.console.clear_input)
 
         self.insert_button = Button(self, bg="#333", fg="white", text="Insert", command=self.ins_button_clicked)
         self.insert_button.place(relwidth=0.12, relheight=0.05, relx=0.05, rely=0.05)

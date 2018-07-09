@@ -7,6 +7,7 @@ import random
 from util.my_threads import TestThread
 from collections import deque
 from time import sleep
+from command.command_factory import ControlCommandFactory
 from util.exceptions import InvalidCommandError
 from command.sequence import CommandSequence
 
@@ -68,13 +69,22 @@ class DrawControl:
     def parse_command(self, command_text):
         """Parses a command with the first argument being
             the command type e.g. 'insert', 'delete', 'clear'
-            and the rest being arguments to the respective command"""
+            and the rest being arguments to the respective command.
+
+            Assume receiver is model unless '?' present as first character,
+            in which case it's a command for the control object"""
+        # handle control-command special case
+        if command_text[0] == "?":
+            my_command_factory = ControlCommandFactory(self)
+            command_text = command_text[1:]
+
+        else:
+            my_command_factory = self.model.get_command_factory()
+
         spl = command_text.split(" ")
         command_type = spl[0]
-        args = spl[1:]
+        args = spl[1:] if len(spl) > 1 else []
 
-        # get command factory and use it to instantiate parsed command
-        my_command_factory = self.model.get_command_factory()
         # may raise Exception (InvalidCommandError) if syntax error in command text
         my_command = my_command_factory.create_command(command_type, *args)
 
