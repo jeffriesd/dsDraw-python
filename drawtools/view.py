@@ -4,6 +4,7 @@ from controller import drawcontrol as ctrl
 from command.bst_command import BSTInsertCommand, BSTRemoveCommand
 from collections import deque
 from textwrap import wrap
+from util.exceptions import InvalidCommandError
 
 
 class Console(Canvas):
@@ -56,14 +57,14 @@ class Console(Canvas):
 
         self.font.configure(size=min(new_font_size_x, new_font_size_y))
 
-    def add_command(self, command_text):
+    def add_line(self, command_text):
         """Adds a line of text to console history.
             Note that this is a string and not the actual command objects,
             so may include things like 'syntax error'"""
         self.console_history.appendleft(command_text)
         self.redraw()
 
-    def pop_command(self):
+    def pop_line(self):
         self.console_history.popleft()
         self.redraw()
 
@@ -76,14 +77,14 @@ class Console(Canvas):
         y_spacing = self.font['size'] * 2
         y = self.winfo_height() - y_spacing
 
-        for cmd in self.console_history:
+        for line in self.console_history:
             # break longer strings into line-sized chunks
-            cmd_wrapped = wrap(cmd, self.chars_per_line - 5)
+            line_wrapped = wrap(line, self.chars_per_line - 5)
 
             # lines have to be drawn in reverse since bottom of console
             # should be the end of the command
-            for line in reversed(cmd_wrapped):
-                if line == cmd_wrapped[0]:
+            for line in reversed(line_wrapped):
+                if line == line_wrapped[0]:
                     # show separator for each new command
                     x = self.font.measure(" ")
                     line = ">> " + line
@@ -172,12 +173,12 @@ class DrawApp(tk.Frame):
         self.console = Console(self, bg="white")
         self.console.place(relwidth=0.25, relheight=0.75, relx=0.05, rely=0.05)
 
-        self.command_input = Entry(self, bg="white", borderwidth=0,
+        self.console_input = Entry(self, bg="white", borderwidth=0,
                                    highlightbackground="white", highlightcolor="white",
                                    font=self.mono_font)
-        self.command_input.place(relwidth=0.25, relheight=0.05, relx=0.05, rely=0.8)
-        self.command_input.bind("<Return>", self.command_entered)
-        self.command_input.bind("<Up>", self.show_last_command)
+        self.console_input.place(relwidth=0.25, relheight=0.05, relx=0.05, rely=0.8)
+        self.console_input.bind("<Return>", self.command_entered)
+        self.console_input.bind("<Up>", self.show_last_command)
 
 
         self.insert_button = Button(self, bg="#333", fg="white", text="Insert", command=self.ins_button_clicked)
@@ -229,7 +230,7 @@ class DrawApp(tk.Frame):
             putting it back into the console Entry.
             Bound to up arrow key by default"""
         last_command = self.console.console_history[0]
-        self.command_input.insert(0, last_command)
+        self.console_input.insert(0, last_command)
 
 
     def command_entered(self, event):
@@ -238,23 +239,33 @@ class DrawApp(tk.Frame):
         show it in console and clear the current input.
         Then pass it to control for execution and add it to the console history.
         """
-        command_text = self.command_input.get()
+        command_text = self.console_input.get()
+        self.logger.info("%s entered into command prompt." % command_text)
 
-        # pass command to control object for parsing and execution
-        command_obj = self.control.parse_command(command_text)
+        # catch invalid command errors (KeyError from command_factory)
+        # e.g. typing 'remov 39' into console
+        try:
+            command_obj = self.control.parse_command(command_text)
 
-        # command parsing process returns None for syntax errors
-        command_text = command_text if command_obj else "Syntax error for '%s'" % command_text
+            # clear contents and add it to console
+            self.console_input.delete(0, "end")
+            self.console.add_line(command_text)
 
-        # clear contents and add it to console
-        self.command_input.delete(0, 'end')
-        self.console.add_command(command_text)
+            # catch logical errors,
+            # e.g. trying to remove a node which isn't there
+            try:
+                self.control.do_command(command_obj)
+            except Exception as ex:
+                err_msg = "Error completing '%s': %s" % (command_text, ex)
+                self.logger.warning(err_msg)
+                self.console_input.delete(0, 'end')
+                self.console.add_line(err_msg)
 
-        # don't execute in case of syntax error
-        if command_obj:
-            self.control.do_command(command_obj)
-
-
+        except InvalidCommandError as err:
+            err_msg = "Syntax error: %s" % err
+            self.logger.warning(err_msg)
+            self.console_input.delete(0, "end")
+            self.console.add_line(err_msg)
 
     def ins_button_clicked(self):
         value = int(self.insert_input.get())
