@@ -54,6 +54,7 @@ class DrawControl:
         # use stack to keep track of command history
         self.command_history = deque(maxlen=10)
 
+
     def clear_log(self):
         """Open log and immediately close stream to empty file contents"""
         with open('../logs/control_log.log', 'w'):
@@ -93,11 +94,13 @@ class DrawControl:
         last_command = self.command_history.popleft()
         self.logger.info("Undoing %s on %s" % (last_command, last_command.receiver))
 
-
         last_command.undo()
 
         if last_command.should_redraw:
             self.display()
+
+    def set_ds(self, new_ds):
+        self.model = new_ds
 
     def display(self, do_render=True, do_sleep=False):
         """Renders data structure (preprocess),

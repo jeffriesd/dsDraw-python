@@ -30,5 +30,5 @@ class BSTCommandFactory(object):
             return my_command(self.receiver, *args, **kwargs)
         except KeyError:
             return None
-            raise Exception("Unable to create %s command for %s data structure" % (type, self.receiver))
+            # raise Exception("Unable to create %s command for %s data structure" % (type, self.receiver))
 

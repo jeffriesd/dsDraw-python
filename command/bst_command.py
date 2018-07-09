@@ -12,9 +12,6 @@ class BSTInsertCommand:
     def execute(self):
         self.receiver.insert(self.value, change_color=self.change_color)
 
-        # need to pass command state info to controller of the tree
-        self.receiver.control.last_command = self
-
     def undo(self):
         """Current implementation of undo for tree.insert.
             Not perfectly accurate because tree shape may not be same after undo."""
@@ -34,7 +31,6 @@ class BSTRemoveCommand:
 
     def execute(self):
         self.receiver.remove(self.value, change_color=self.change_color)
-        self.receiver.control.last_command = self
 
     def undo(self):
         """Current implementation of undo for tree.remove.
