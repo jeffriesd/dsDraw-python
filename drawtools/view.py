@@ -38,6 +38,8 @@ class Console(Canvas):
         self.command_history = deque()
 
         self.bind("<Configure>", self.on_resize)
+        self.bind("<Button-1>", lambda ev: self.input.focus())
+
         self.height = self.winfo_reqheight()
         self.width = self.winfo_reqwidth()
         self.font = parent.mono_font
@@ -185,7 +187,7 @@ class DrawCanvas(Canvas):
 
 
 class DrawApp(tk.Frame):
-    def __init__(self, ds, control, logger, *args, **kwargs):
+    def __init__(self, ds, control, *args, **kwargs):
         """
         Initializes width and height assuming that
         kwargs['width'/'height'] are the screen size
@@ -195,7 +197,6 @@ class DrawApp(tk.Frame):
         """
         self.ds = ds
         self.control = control
-        self.logger = logger
 
         self.screen_width = kwargs["width"]
         self.screen_height = kwargs["height"]
@@ -213,6 +214,15 @@ class DrawApp(tk.Frame):
 
         self.mono_font = tkfont.Font(family="Monospace", size=10, weight="normal")
         self.init_components()
+
+    def set_logger(self, logger):
+        self.logger = logger
+        self.clear_log()
+        self.logger.info("\n\n\t----- new run -----\n")
+
+    def clear_log(self):
+        with open("../logs/view_log.log", "w"):
+            pass
 
     def on_resize(self, event):
         """Updates width/height and redraws canvas on resize"""
@@ -293,10 +303,10 @@ class DrawApp(tk.Frame):
         """
 
         command_text = self.console_input.get()
-        self.logger.info("%s entered into command prompt." % command_text)
+        self.logger.info("'%s' entered into command prompt." % command_text)
         self.console.clear_input()
 
-        message = self.control.process_command(command_text)
+        self.control.process_command(command_text)
 
     def ins_button_clicked(self):
         value = int(self.insert_input.get())

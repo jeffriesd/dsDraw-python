@@ -36,7 +36,8 @@ class DrawControl:
         # creating main view (subclass of tk.Frame)
         # and passing in data structure
         self.view = view.DrawApp(master=master, width=width, height=height,
-                                 ds=model, control=self, logger=self.view_logger, background="#333")
+                                 ds=model, control=self, background="#333")
+        self.view.set_logger(self.view_logger)
 
         self.logger.info("\n\n\t----- new run -----\n")
         self.logger.info("created main view")
@@ -47,13 +48,13 @@ class DrawControl:
         self.canvas = self.view.canvas
 
         # time in seconds for animation to occur
-        self.tick = .1
+        self.tick = .15
 
         self.cell_w = -1
         self.cell_h = -1
 
         # use stack to keep track of command history
-        self.command_history = deque(maxlen=10)
+        self.command_history = deque()
 
         # command sequence object initialized with reference to control class
         self.command_sequence = CommandSequence(self)
@@ -78,19 +79,6 @@ class DrawControl:
         my_command = my_command_factory.create_command(command_type, *args)
 
         return my_command
-
-    def perform_command(self, command):
-        """Pass in a command which has been initialized with a receiver.
-            Perform command by calling command.execute() and redraw the canvas
-            if necessary"""
-
-        self.logger.info("Performing %s on %s" % (command, command.receiver))
-        self.command_history.appendleft(command)
-
-        command.execute()
-
-        if command.should_redraw:
-            self.display()
 
     def process_command(self, command_text):
         """
@@ -124,6 +112,19 @@ class DrawControl:
             err_msg = "Syntax error: %s" % err
             self.logger.warning(err_msg)
             self.view.console.add_line(err_msg, is_command=False)
+
+    def perform_command(self, command_obj):
+        """Pass in a command_obj which has been initialized with a receiver.
+            Perform command_obj by calling command_obj.execute() and redraw the canvas
+            if necessary"""
+
+        self.logger.info("Performing %s on %s" % (command_obj, command_obj.receiver))
+        self.command_history.appendleft(command_obj)
+
+        command_obj.execute()
+
+        if command_obj.should_redraw:
+            self.display()
 
     def undo_command(self):
         """Pass in a command which has been initialized with a receiver.

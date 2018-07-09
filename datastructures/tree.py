@@ -228,7 +228,7 @@ class BST:
         return "BST with root %s" % self.root
 
     def set_control(self, control):
-        """Sets reference for controller"""
+        """Sets reference for control object"""
         self.control = control
 
     def set_logger(self, logger):
