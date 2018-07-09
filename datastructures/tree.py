@@ -408,6 +408,9 @@ class BST:
 
     def _find(self, cur_node, el):
         """Standard recursive find method O(logn)"""
+        if cur_node is None:
+            return None
+
         if cur_node.val == el:
             return cur_node
 
