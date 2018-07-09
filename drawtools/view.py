@@ -206,7 +206,7 @@ class DrawApp(tk.Frame):
         self.d_button.place(relwidth=0.12, relheight=0.1, relx=0.05, rely=0.875)
 
 
-        self.test_button = Button(self, bg="#333", fg="white", text="Test", command=self.control.test_dups)
+        self.test_button = Button(self, bg="#333", fg="white", text="Test", command=self.control.do_full_sequence)
         self.test_button.place(relwidth=0.12, relheight=0.1, relx=0.18, rely=0.875)
 
     def redraw(self):
@@ -260,7 +260,8 @@ class DrawApp(tk.Frame):
         value = int(self.insert_input.get())
         command = BSTInsertCommand(self.ds, value, change_color=True)
 
-        self.control.do_command(command)
+        # self.control.do_command(command)
+        self.control.add_to_sequence(command)
 
     def rem_button_clicked(self):
         try:
@@ -268,4 +269,6 @@ class DrawApp(tk.Frame):
         except ValueError:
             value = self.ds.root.val
         command = BSTRemoveCommand(self.ds, value, change_color=True)
-        self.control.do_command(command)
+
+        # self.control.do_command(command)
+        self.control.add_to_sequence(command)
