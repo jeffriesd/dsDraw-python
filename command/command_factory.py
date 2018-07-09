@@ -1,5 +1,31 @@
 from command.bst_command import BSTInsertCommand, BSTRemoveCommand
+from command.control_command import ClearConsoleCommand
 from util.exceptions import InvalidCommandError
+
+
+class ControlCommandFactory(object):
+    """
+    Class to instantiate commands with control object
+    as receiver. These include commands for clearing the console,
+    and assigning variable names to returned references.
+    """
+    def __init__(self, receiver):
+        self.receiver = receiver
+
+        self.command_list = {
+            "clear": ClearConsoleCommand,
+            # "assign": CreateVariableCommand
+        }
+
+    def create_command(self, type, *args, **kwargs):
+        """Create a new command object with given arguments.
+            Raises InvalidCommandError for malformed commands."""
+        try:
+            my_command = self.command_list[type]
+            return my_command(self.receiver, *args, **kwargs)
+        except KeyError:
+            raise InvalidCommandError("Invalid command: '%s'" % type)
+
 
 class BSTCommandFactory(object):
     """Class to instantiate command objects for BST.
