@@ -31,4 +31,7 @@ class BSTCommandFactory(object):
             return my_command(self.receiver, *args, **kwargs)
         except KeyError:
             raise InvalidCommandError("Invalid command for BST: '%s'" % type)
+        except ValueError:
+            raise InvalidCommandError("Invalid arguments for '%s': '%s'" % (type, args))
+
 
