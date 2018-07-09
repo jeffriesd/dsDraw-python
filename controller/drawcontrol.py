@@ -7,7 +7,7 @@ import random
 from util.my_threads import TestThread
 from collections import deque
 from time import sleep
-from copy import deepcopy
+from util.exceptions import InvalidCommandError
 from command.sequence import CommandSequence
 
 
@@ -79,7 +79,7 @@ class DrawControl:
 
         return my_command
 
-    def do_command(self, command):
+    def perform_command(self, command):
         """Pass in a command which has been initialized with a receiver.
             Perform command by calling command.execute() and redraw the canvas
             if necessary"""
@@ -91,6 +91,39 @@ class DrawControl:
 
         if command.should_redraw:
             self.display()
+
+    def process_command(self, command_text):
+        """
+        Parse and instantiate command with parse_command()
+        and execute it with perform_command(), checking for
+        syntactical and logical errors, and updating
+        the console for the user.
+        :param command_text: command text passed from view
+        """
+        # catch invalid command errors (KeyError from command_factory)
+        # e.g. typing 'remov 39' into console
+        try:
+            command_obj = self.parse_command(command_text)
+
+            # clear contents and add it to console
+            self.view.console.add_line(command_text)
+
+            # catch logical errors,
+            # e.g. trying to remove a node which isn't there
+            try:
+                self.perform_command(command_obj)
+            except Exception as ex:
+                err_msg = "Error completing '%s': %s" % (command_text, ex)
+                self.logger.warning(err_msg)
+                self.view.console.add_line(err_msg, is_command=False)
+
+        except InvalidCommandError as err:
+            # still show commands with bad syntax
+            self.view.console.add_line(command_text)
+
+            err_msg = "Syntax error: %s" % err
+            self.logger.warning(err_msg)
+            self.view.console.add_line(err_msg, is_command=False)
 
     def undo_command(self):
         """Pass in a command which has been initialized with a receiver.

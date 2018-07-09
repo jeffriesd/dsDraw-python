@@ -294,29 +294,9 @@ class DrawApp(tk.Frame):
 
         command_text = self.console_input.get()
         self.logger.info("%s entered into command prompt." % command_text)
-        self.console_input.delete(0, 'end')
+        self.console.clear_input()
 
-        # catch invalid command errors (KeyError from command_factory)
-        # e.g. typing 'remov 39' into console
-        try:
-            command_obj = self.control.parse_command(command_text)
-
-            # clear contents and add it to console
-            self.console.add_line(command_text)
-
-            # catch logical errors,
-            # e.g. trying to remove a node which isn't there
-            try:
-                self.control.do_command(command_obj)
-            except Exception as ex:
-                err_msg = "Error completing '%s': %s" % (command_text, ex)
-                self.logger.warning(err_msg)
-                self.console.add_line(err_msg, is_command=False)
-
-        except InvalidCommandError as err:
-            err_msg = "Syntax error: %s" % err
-            self.logger.warning(err_msg)
-            self.console.add_line(err_msg, is_command=False)
+        message = self.control.process_command(command_text)
 
     def ins_button_clicked(self):
         value = int(self.insert_input.get())
