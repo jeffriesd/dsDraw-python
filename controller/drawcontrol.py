@@ -8,6 +8,7 @@ from util.my_threads import TestThread
 from collections import deque
 from time import sleep
 from copy import deepcopy
+from command.sequence import CommandSequence
 
 
 class DrawControl:
@@ -54,6 +55,9 @@ class DrawControl:
         # use stack to keep track of command history
         self.command_history = deque(maxlen=10)
 
+        # command sequence object initialized with reference to control class
+        self.command_sequence = CommandSequence(self)
+
 
     def clear_log(self):
         """Open log and immediately close stream to empty file contents"""
@@ -98,6 +102,18 @@ class DrawControl:
 
         if last_command.should_redraw:
             self.display()
+
+    def add_to_sequence(self, command_obj):
+        """
+            ***To be replaced by command object with control as receiver
+        """
+        self.command_sequence.add_command(command_obj)
+
+    def do_full_sequence(self):
+        """
+            ***To be replaced by command object with control as receiver
+        """
+        self.command_sequence.execute_sequence()
 
     def set_ds(self, new_ds):
         self.model = new_ds
