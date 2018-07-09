@@ -74,6 +74,7 @@ class DrawControl:
 
         # get command factory and use it to instantiate parsed command
         my_command_factory = self.model.get_command_factory()
+        # may raise Exception (InvalidCommandError) if syntax error in command text
         my_command = my_command_factory.create_command(command_type, *args)
 
         return my_command
