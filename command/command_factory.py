@@ -1,4 +1,5 @@
 from command.bst_command import BSTInsertCommand, BSTRemoveCommand
+from util.exceptions import InvalidCommandError
 
 class BSTCommandFactory(object):
     """Class to instantiate command objects for BST.
@@ -29,6 +30,5 @@ class BSTCommandFactory(object):
             my_command = self.command_list[type.lower()]
             return my_command(self.receiver, *args, **kwargs)
         except KeyError:
-            return None
-            # raise Exception("Unable to create %s command for %s data structure" % (type, self.receiver))
+            raise InvalidCommandError("Invalid command for BST: '%s'" % type)
 
