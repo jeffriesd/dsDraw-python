@@ -10,12 +10,33 @@ from util.exceptions import InvalidCommandError
 class Console(Canvas):
     """
     Canvas-like class to show command history. Command history
-    will be stored in a stack and drawn top-up. New commands will be
-    pushed on top and undone commands will be popped.
+    will be stored in a stack and drawn top-up.
+    New commands will be pushed on top, so the bottom of the console
+    is the top of this stack.
     """
-    def __init__(self, parent, **kwargs):
+
+    class ConsoleLine(object):
+        """
+        Solely used to differentiate between commands and errors
+        in cycling through commands and printing them.
+        """
+        def __init__(self, text, is_command):
+            # super().__init__(text)
+            self.text = text
+            self.is_command = is_command
+
+        def __repr__(self):
+            return self.text
+
+    def __init__(self, parent, console_input, **kwargs):
         Canvas.__init__(self, parent, **kwargs)
+        self.input = console_input
+
+        # used to keep track of all ConsoleLine objects
         self.console_history = deque()
+        # used only to track command objects (for cycling with keys)
+        self.command_history = deque()
+
         self.bind("<Configure>", self.on_resize)
         self.height = self.winfo_reqheight()
         self.width = self.winfo_reqwidth()
@@ -24,6 +45,9 @@ class Console(Canvas):
         # defaults for text resizing
         self.chars_per_line = 35
         self.lines_per_console = 45
+
+        # store index for cycling through commands with arrow keys
+        self.cycle_index = -1
 
     def on_resize(self, event):
         """
@@ -57,15 +81,44 @@ class Console(Canvas):
 
         self.font.configure(size=min(new_font_size_x, new_font_size_y))
 
-    def add_line(self, command_text):
+    def clear_input(self):
+        self.input.delete(0, "end")
+
+    def previous_command(self, event):
+        """Function to support quick cycling of last command by
+            putting it back into the console Entry.
+            Bound to up arrow key by default"""
+        self.cycle_index += 1
+        if self.cycle_index >= len(self.command_history):
+            self.cycle_index = len(self.command_history) - 1
+
+        last_command = self.command_history[self.cycle_index]
+        self.clear_input()
+        self.input.insert(0, last_command)
+
+    def next_command(self, event):
+        """Function to support quick cycling of commands in
+            the forwards direction. Bound to down arrow key
+            by default. If 'bottom' is hit and arrow key pressed
+            again, then clear the input"""
+
+        self.cycle_index -= 1
+        if self.cycle_index < 0:
+            self.cycle_index = -1
+            self.clear_input()
+        else:
+            last_command = self.command_history[self.cycle_index]
+            self.clear_input()
+            self.input.insert(0, last_command)
+
+    def add_line(self, command_text, is_command=True):
         """Adds a line of text to console history.
             Note that this is a string and not the actual command objects,
             so may include things like 'syntax error'"""
-        self.console_history.appendleft(command_text)
-        self.redraw()
-
-    def pop_line(self):
-        self.console_history.popleft()
+        new_line = Console.ConsoleLine(command_text, is_command)
+        if is_command:
+            self.command_history.appendleft(new_line)
+        self.console_history.appendleft(new_line)
         self.redraw()
 
     def redraw(self):
@@ -77,9 +130,12 @@ class Console(Canvas):
         y_spacing = self.font['size'] * 2
         y = self.winfo_height() - y_spacing
 
-        for line in self.console_history:
+        for console_line in self.console_history:
+            # grab text from console_line object
+            line_text = console_line.text
+
             # break longer strings into line-sized chunks
-            line_wrapped = wrap(line, self.chars_per_line - 5)
+            line_wrapped = wrap(line_text, self.chars_per_line - 5)
 
             # lines have to be drawn in reverse since bottom of console
             # should be the end of the command
@@ -87,7 +143,10 @@ class Console(Canvas):
                 if line == line_wrapped[0]:
                     # show separator for each new command
                     x = self.font.measure(" ")
-                    line = ">> " + line
+
+                    # only show >> for commands
+                    if console_line.is_command:
+                        line = ">> " + line
                 else:
                     # offset wrapped lines
                     x = self.font.measure(">>  ")
@@ -167,19 +226,20 @@ class DrawApp(tk.Frame):
         relative sizes for components. Binds 'draw'
         button to self.display()
         """
-        w = self.width
-        h = self.height
-
-        self.console = Console(self, bg="white")
-        self.console.place(relwidth=0.25, relheight=0.75, relx=0.05, rely=0.05)
 
         self.console_input = Entry(self, bg="white", borderwidth=0,
                                    highlightbackground="white", highlightcolor="white",
                                    font=self.mono_font)
         self.console_input.place(relwidth=0.25, relheight=0.05, relx=0.05, rely=0.8)
         self.console_input.bind("<Return>", self.command_entered)
-        self.console_input.bind("<Up>", self.show_last_command)
 
+        # initialize Console with reference to input
+        self.console = Console(self, self.console_input, bg="white")
+        self.console.place(relwidth=0.25, relheight=0.75, relx=0.05, rely=0.05)
+
+        # bind up/down arrow keys to console action
+        self.console_input.bind("<Up>", self.console.previous_command)
+        self.console_input.bind("<Down>", self.console.next_command)
 
         self.insert_button = Button(self, bg="#333", fg="white", text="Insert", command=self.ins_button_clicked)
         self.insert_button.place(relwidth=0.12, relheight=0.05, relx=0.05, rely=0.05)
@@ -225,22 +285,16 @@ class DrawApp(tk.Frame):
     def clear_canvas(self):
         self.canvas.delete("all")
 
-    def show_last_command(self, event):
-        """Function to support quick redoing of last command by
-            putting it back into the console Entry.
-            Bound to up arrow key by default"""
-        last_command = self.console.console_history[0]
-        self.console_input.insert(0, last_command)
-
-
     def command_entered(self, event):
         """
         Command entered into input, so parse it,
         show it in console and clear the current input.
         Then pass it to control for execution and add it to the console history.
         """
+
         command_text = self.console_input.get()
         self.logger.info("%s entered into command prompt." % command_text)
+        self.console_input.delete(0, 'end')
 
         # catch invalid command errors (KeyError from command_factory)
         # e.g. typing 'remov 39' into console
@@ -248,7 +302,6 @@ class DrawApp(tk.Frame):
             command_obj = self.control.parse_command(command_text)
 
             # clear contents and add it to console
-            self.console_input.delete(0, "end")
             self.console.add_line(command_text)
 
             # catch logical errors,
@@ -258,14 +311,12 @@ class DrawApp(tk.Frame):
             except Exception as ex:
                 err_msg = "Error completing '%s': %s" % (command_text, ex)
                 self.logger.warning(err_msg)
-                self.console_input.delete(0, 'end')
-                self.console.add_line(err_msg)
+                self.console.add_line(err_msg, is_command=False)
 
         except InvalidCommandError as err:
             err_msg = "Syntax error: %s" % err
             self.logger.warning(err_msg)
-            self.console_input.delete(0, "end")
-            self.console.add_line(err_msg)
+            self.console.add_line(err_msg, is_command=False)
 
     def ins_button_clicked(self):
         value = int(self.insert_input.get())
