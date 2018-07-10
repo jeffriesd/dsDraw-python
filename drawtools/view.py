@@ -83,6 +83,11 @@ class Console(Canvas):
 
         self.font.configure(size=min(new_font_size_x, new_font_size_y))
 
+    def reset_cycle(self):
+        """Used to reset cycle when command is entered from
+            using arrow key history."""
+        self.cycle_index = -1
+
     def clear_input(self, event=None):
         self.input.delete(0, "end")
 
@@ -312,6 +317,7 @@ class DrawApp(tk.Frame):
         command_text = self.console_input.get()
         self.logger.info("'%s' entered into command prompt." % command_text)
         self.console.clear_input()
+        self.console.reset_cycle()
 
         self.control.process_command(command_text)
 
