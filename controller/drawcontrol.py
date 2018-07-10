@@ -113,13 +113,13 @@ class DrawControl:
 
             # catch logical errors,
             # e.g. trying to remove a node which isn't there
-            # try:
-            return self.perform_command(command_obj)
-            # except Exception as ex:
-            #     err_msg = "Error completing '%s': %s" % (command_text, ex)
-            #     self.logger.warning(err_msg)
-            #
-            #     self.view.console.add_line(err_msg, is_command=False)
+            try:
+                return self.perform_command(command_obj)
+            except Exception as ex:
+                err_msg = "Error completing '%s': %s" % (command_text, ex)
+                self.logger.warning(err_msg)
+
+                self.view.console.add_line(err_msg, is_command=False)
 
         except InvalidCommandError as err:
             # still show commands with bad syntax
@@ -293,8 +293,8 @@ class TreeDraw(DrawControl):
             #                               % (node, node.x, node.y,
             #                                  node.get_size(), node.depth))
             # node_text = ("%s\nd: %s; s: %s" % ("   " + str(node), node.depth, node.get_size()))
-            # node_text = ("%s\nxl: %s, xr: %s\nd:%s; s:%s" % (node.val, node.xleft.val, node.xright.val, node.depth, node.get_size()))
-            node_text = node.val
+            node_text = ("%s\nxl: %s, xr: %s\nd:%s; s:%s" % (node.val, node.xleft.val, node.xright.val, node.depth, node.get_size()))
+            # node_text = node.val
             # node_text = ""
 
             self.canvas.create_text(x0 + cell_w/2, y0 + cell_h/2,
@@ -326,8 +326,6 @@ class TreeDraw(DrawControl):
         else:
             self.test_thread.stop()
             self.test_thread = None
-
-
 
 
 def build_tree(n, max_val, t=None):

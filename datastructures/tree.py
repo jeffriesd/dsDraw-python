@@ -462,18 +462,17 @@ class BST:
             - node_b
             - parent of node_a
 
-        may need to add log(n) traversal of subtrees to update
+        Had to add log(n) traversal of subtrees to update
         depths
         """
         # precondition
         if node_b is not node_a.right:
-            raise ValueError("Cannot do left rotation: %s is not right child of %s"
-                             % (node_b, node_a))
+            msg = "Cannot do left rotation: %s is not right child of %s" % (node_b, node_a)
+            raise ValueError(msg)
 
         # greater than a less than b,
         # will become new right child of a
         gt_a_lt_b = node_b.left
-
         node_a.right = gt_a_lt_b
 
         # moving node_a subtree down a level
@@ -486,41 +485,87 @@ class BST:
             node_a.left.depth += 1
             node_a.left.update_child_depths()
 
-        # special case
+        # special case if node_a is root
         if node_a is self.root:
             self.root = node_b
-            node_b.parent = None
-            node_a.parent = node_b
-            a_parent = None
         else:
-            a_parent = node_a.parent
-
             # make link from parent to node_b
             if node_a.is_left_child():
-                a_parent.left = node_b
+                node_a.parent.left = node_b
             else:
-                a_parent.right = node_b
+                node_a.parent.right = node_b
 
-            # moving node_b subtree up a level
-            # and its right subtree
-            node_b.depth -= 1
-            if node_b.right:
-                node_b.right.depth -= 1
-                node_b.right.update_child_depths()
+        # moving node_b subtree up a level
+        # and its right subtree
+        node_b.depth -= 1
+        if node_b.right:
+            node_b.right.depth -= 1
+            node_b.right.update_child_depths()
 
+        # update parent references
+        node_b.parent = node_a.parent
         node_a.parent = node_b
-        node_b.parent = a_parent
 
-        # also may need to update extreme_descendants for any ancestors
+        # also need to update extreme_descendants for any ancestors
         node = node_a
         while node:
             node.update_extremes()
             node.update_size()
             node = node.parent
 
-        print("root is %s" % self.root)
-        print("children are %s" % self.root.children())
-        print("parent is %s" % self.root.parent)
+    def rotate_right(self, node_a, node_b):
+        """
+        Perform right rotation with node_a and node_b
+
+        precondition: node_b is left child of node_a
+        postcondition: node_a is right child of node_b
+
+        Includes final O(log(n)) traversal to update depths
+        and extreme descendant info.
+        """
+
+        if node_b is not node_a.left:
+            msg = "Cannot do right rotation: %s is not left child of %s" % (node_b, node_a)
+            raise ValueError(msg)
+
+        # subtree between b and a becomes new left
+        # child of node_a
+        gt_b_lt_a = node_b.right
+        node_a.left = gt_b_lt_a
+
+        # move a and its right subtree down a level
+        node_b.right = node_a
+        node_a.depth += 1
+        if node_a.right:
+            node_a.right.depth += 1
+            node_a.right.update_child_depths()
+
+        # special case if node_a is root
+        if node_a is self.root:
+            self.root = node_b
+        else:
+            # make connections from a's parent to b
+            if node_a.is_left_child():
+                node_a.parent.left = node_b
+            else:
+                node_a.parent.right = node_b
+
+        # move b and its left subtree up a level
+        node_b.depth -= 1
+        if node_b.left:
+            node_b.left.depth -= 1
+            node_b.left.update_child_depths()
+
+        # update parent references
+        node_b.parent = node_a.parent
+        node_a.parent = node_b
+
+        # walk up to root and update sizes and extreme descendants
+        node = node_a
+        while node:
+            node.update_extremes()
+            node.update_size()
+            node = node.parent
 
     def setup_tr(self):
         """

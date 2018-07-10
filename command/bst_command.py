@@ -96,7 +96,7 @@ class BSTRotateCommand(object):
             if self.direction == "left":
                 self.receiver.rotate_left(node_a, node_b)
             elif self.direction == "right":
-                pass
+                self.receiver.rotate_right(node_a, node_b)
             else:
                 raise ValueError("No such command")
 
