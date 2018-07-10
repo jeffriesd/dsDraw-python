@@ -1,5 +1,5 @@
-from command.bst_command import BSTInsertCommand, BSTRemoveCommand
-from command.control_command import ClearConsoleCommand, CreateVariableCommand
+from command.bst_command import BSTInsertCommand, BSTRemoveCommand, BSTFindCommand
+from command.control_command import ClearConsoleCommand, CreateVariableCommand, PrintVariableCommand
 from util.exceptions import InvalidCommandError
 
 
@@ -14,7 +14,8 @@ class ControlCommandFactory(object):
 
         self.command_list = {
             "clear": ClearConsoleCommand,
-            "assign": CreateVariableCommand
+            "assign": CreateVariableCommand,
+            "print": PrintVariableCommand
         }
 
     def create_command(self, type, *args, **kwargs):
@@ -42,7 +43,8 @@ class BSTCommandFactory(object):
 
         self.command_list = {
             "insert": BSTInsertCommand,
-            "remove": BSTRemoveCommand
+            "remove": BSTRemoveCommand,
+            "find": BSTFindCommand
         }
 
     def create_command(self, type, *args, **kwargs):

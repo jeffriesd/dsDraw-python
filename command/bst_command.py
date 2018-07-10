@@ -48,3 +48,20 @@ class BSTRemoveCommand:
 
     def __repr__(self):
         return "REMOVE %s" % self.value
+
+class BSTFindCommand:
+
+    def __init__(self, receiver, value, should_redraw=True, change_color=True):
+        self.receiver = receiver
+        self.value = int(value)
+        self.should_redraw = should_redraw
+        self.change_color = change_color
+
+    def execute(self):
+        return self.receiver.find(self.value, change_color=self.change_color)
+
+    def undo(self):
+        pass
+
+    def __repr__(self):
+        return "FIND %s" % self.value
