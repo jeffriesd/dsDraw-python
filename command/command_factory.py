@@ -1,4 +1,4 @@
-from command.bst_command import BSTInsertCommand, BSTRemoveCommand, BSTFindCommand
+from command.bst_command import BSTInsertCommand, BSTRemoveCommand, BSTFindCommand, BSTRotateCommand
 from command.control_command import ClearConsoleCommand, CreateVariableCommand, PrintVariableCommand
 from util.exceptions import InvalidCommandError
 
@@ -44,7 +44,8 @@ class BSTCommandFactory(object):
         self.command_list = {
             "insert": BSTInsertCommand,
             "remove": BSTRemoveCommand,
-            "find": BSTFindCommand
+            "find": BSTFindCommand,
+            "rotate": BSTRotateCommand,
         }
 
     def create_command(self, type, *args, **kwargs):
