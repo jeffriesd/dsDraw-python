@@ -47,7 +47,7 @@ class TreeNode:
         self.color = 'white'
 
     def __repr__(self):
-        return str(self.val)
+        return "Node(%s)" % self.val
 
     def __eq__(self, other):
         return self.val == other.val
@@ -328,7 +328,7 @@ class BST:
         """Wrapper method for recursive remove method"""
         self.log("info", "calling wrapper remove func with root %s to remove %i" % (self.root, el))
 
-        if self.find(el):
+        if self.find(el, change_color=False):
             # if tree has exactly one node
             if self.root.size == 1:
                 self.root = None
@@ -402,14 +402,20 @@ class BST:
 
         return cur_node
 
-    def find(self, el):
+    def find(self, el, change_color):
         """Wrapper method for recursive find function"""
-        return self._find(self.root, el)
+        return self._find(self.root, el, change_color)
 
-    def _find(self, cur_node, el):
+    def _find(self, cur_node, el, change_color):
         """Standard recursive find method O(logn)"""
-        if cur_node is None:
-            return None
+        # if cur_node is None:
+        #     return None
+
+        # change color of current node to show traversal of tree
+        if change_color:
+            cur_node.color = "red"
+            self.control.display(do_render=True, do_sleep=True)
+            cur_node.color = "white"
 
         if cur_node.val == el:
             return cur_node
@@ -418,10 +424,9 @@ class BST:
             return None
 
         if el <= cur_node.val:
-            return self._find(cur_node.left, el)
+            return self._find(cur_node.left, el, change_color)
         else:
-            return self._find(cur_node.right, el)
-
+            return self._find(cur_node.right, el, change_color)
 
     def print_inorder(self, coords=False):
         """
