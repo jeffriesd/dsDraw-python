@@ -58,6 +58,7 @@ class BSTFindCommand:
         self.change_color = change_color
 
     def execute(self):
+
         return self.receiver.find(self.value, change_color=self.change_color)
 
     def undo(self):

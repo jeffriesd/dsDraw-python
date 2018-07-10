@@ -128,12 +128,13 @@ class DrawControl:
             self.view.console.add_line(err_msg, is_command=False)
 
     def perform_command(self, command_obj):
-        """Pass in a command_obj which has been initialized with a receiver.
-            Perform command_obj by calling command_obj.execute() and redraw the canvas
-            if necessary
+        """
+        Pass in a command_obj which has been initialized with a receiver.
+        Perform command_obj by calling command_obj.execute() and redraw the canvas
+        if necessary.
 
-            :return: return in case of commands like bst.find()
-            """
+        :return: return in case of commands like bst.find()
+        """
 
         self.logger.info("Performing %s on %s" % (command_obj, command_obj.receiver))
         self.command_history.appendleft(command_obj)
@@ -149,13 +150,20 @@ class DrawControl:
         """Pass in a command which has been initialized with a receiver.
             Perform command by calling command.execute() and redraw the canvas
             if necessary"""
-        last_command = self.command_history.popleft()
-        self.logger.info("Undoing %s on %s" % (last_command, last_command.receiver))
+        try:
+            last_command = self.command_history.popleft()
+            self.logger.info("Undoing %s on %s" % (last_command, last_command.receiver))
 
-        last_command.undo()
+            last_command.undo()
+            if last_command.should_redraw:
+                self.display()
 
-        if last_command.should_redraw:
-            self.display()
+        except IndexError as e:
+            err_msg = "Error: Nothing left to undo"
+            self.logger.error(err_msg)
+            self.view.console.add_line(err_msg, is_command=False)
+
+
 
     def add_to_sequence(self, command_obj):
         """
