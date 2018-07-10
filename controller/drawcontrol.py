@@ -60,6 +60,9 @@ class DrawControl:
         # command sequence object initialized with reference to control class
         self.command_sequence = CommandSequence(self)
 
+        # use dictionary to store user-defined variables
+        self.my_variables = {}
+
 
     def clear_log(self):
         """Open log and immediately close stream to empty file contents"""
@@ -97,6 +100,7 @@ class DrawControl:
         syntactical and logical errors, and updating
         the console for the user.
         :param command_text: command text passed from view
+        :return: return value in the case of commands like bst.find()
         """
         # catch invalid command errors (KeyError from command_factory)
         # e.g. typing 'remov 39' into console
@@ -109,7 +113,7 @@ class DrawControl:
             # catch logical errors,
             # e.g. trying to remove a node which isn't there
             try:
-                self.perform_command(command_obj)
+                return self.perform_command(command_obj)
             except Exception as ex:
                 err_msg = "Error completing '%s': %s" % (command_text, ex)
                 self.logger.warning(err_msg)
@@ -126,15 +130,20 @@ class DrawControl:
     def perform_command(self, command_obj):
         """Pass in a command_obj which has been initialized with a receiver.
             Perform command_obj by calling command_obj.execute() and redraw the canvas
-            if necessary"""
+            if necessary
+
+            :return: return in case of commands like bst.find()
+            """
 
         self.logger.info("Performing %s on %s" % (command_obj, command_obj.receiver))
         self.command_history.appendleft(command_obj)
 
-        command_obj.execute()
+        command_value = command_obj.execute()
 
         if command_obj.should_redraw:
             self.display()
+
+        return command_value
 
     def undo_command(self):
         """Pass in a command which has been initialized with a receiver.
@@ -273,7 +282,7 @@ class TreeDraw(DrawControl):
             #                                  node.get_size(), node.depth))
             # node_text = ("%s\nd: %s; s: %s" % ("   " + str(node), node.depth, node.get_size()))
             # node_text = ("%s\nxl: %s, xr: %s\nd:%s; s:%s" % (node, node.xleft, node.xright, node.depth, node.get_size()))
-            node_text = node
+            node_text = node.val
             # node_text = ""
 
             self.canvas.create_text(x0 + cell_w/2, y0 + cell_h/2,
