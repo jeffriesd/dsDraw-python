@@ -872,6 +872,7 @@ class BST:
         self.petrify_tr()
 
         # determine max/min x/y
+        self.max_x = self.max_y = self.min_x = self.min_y = 0
         for node in self.root:
             self.max_x = max(node.x, self.max_x)
             self.max_y = max(node.y, self.max_y)
