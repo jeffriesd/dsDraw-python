@@ -22,7 +22,7 @@ class Console(Canvas):
         """
         def __init__(self, text, is_command):
             # super().__init__(text)
-            self.text = text
+            self.text = str(text)
             self.is_command = is_command
 
         def __repr__(self):
