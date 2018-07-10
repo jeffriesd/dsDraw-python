@@ -94,7 +94,7 @@ class BSTRotateCommand(object):
             node_b = self.receiver.control.my_variables[self.name_b]
 
             if self.direction == "left":
-                self.receiver.left_rotate(node_a, node_b)
+                self.receiver.rotate_left(node_a, node_b)
             elif self.direction == "right":
                 pass
             else:

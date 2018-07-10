@@ -284,12 +284,12 @@ class DrawApp(tk.Frame):
         self.d_button.place(relwidth=0.12, relheight=0.1, relx=0.05, rely=0.875)
 
 
-        self.test_button = Button(self, bg="#333", fg="white", text="Test", command=self.control.test_dups)
+        self.test_button = Button(self, bg="#333", fg="white", text="Test", command=self.control.continuous_test)
         self.test_button.place(relwidth=0.12, relheight=0.1, relx=0.18, rely=0.875)
 
     def redraw(self):
         # temporary code to reset tree each button press
-        new_tree = ctrl.build_tree(100, 0)
+        new_tree = ctrl.build_tree(50, 0)
         self.ds = new_tree
         self.ds.set_logger(self.control.model_logger)
 

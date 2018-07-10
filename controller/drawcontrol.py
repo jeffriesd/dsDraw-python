@@ -166,7 +166,6 @@ class DrawControl:
             self.view.console.add_line(err_msg, is_command=False)
 
 
-
     def add_to_sequence(self, command_obj):
         """
             ***To be replaced by command object with control as receiver
@@ -216,7 +215,6 @@ class TreeDraw(DrawControl):
 
         self.logger.info("using tree mode")
         self.tree = self.model
-        self.root = self.tree.root
 
         self.test_thread = None
 
@@ -225,20 +223,22 @@ class TreeDraw(DrawControl):
     def set_ds(self, new_ds):
         self.model = new_ds
         self.tree = new_ds
-        self.root = new_ds.root
 
     def duplicate_coords(self):
-        all_xy = [(node.x, node.y) for node in self.root]
-        all_1 = all([all_xy.count((node.x, node.y)) == 1 for node in self.root])
+        all_xy = [(node.x, node.y) for node in self.tree]
+        all_1 = all([all_xy.count((node.x, node.y)) == 1 for node in self.tree])
         if all_1:
             # print("only 1 of each coordinate!")
             return None
         else:
             # print("duplicate coordinates. BAD!!!!!")
-            return [node for node in self.root
+            return [node for node in self.tree.root
                     if all_xy.count((node.x, node.y)) != 1]
 
     def preprocess(self):
+        """Determines actual size of each node.
+            Called after tree.render() because value
+            ranges needed for x and y"""
         self.logger.debug("entering preprocess stage")
         width = self.canvas.width
         height = self.canvas.height
@@ -266,7 +266,7 @@ class TreeDraw(DrawControl):
 
         # traverse tree in preorder so lines get drawn
         # first and nodes are placed on top
-        for node in self.root.preorder():
+        for node in self.tree.preorder():
             x0 = node.x * cell_w
             y0 = node.y * cell_h
             for c in node.children():
@@ -286,13 +286,15 @@ class TreeDraw(DrawControl):
             # drawing of edges
             x0_n, y0_n = [x0 + cell_w/4, y0 + cell_h/4]
 
+            self.logger.debug("Drawing Node(%s) at %.2f, %.2f" % (node.val, x0_n, y0_n))
+
             self.canvas.create_oval(x0_n, y0_n, x0_n + cell_w/2, y0_n + cell_h/2, fill=node.color)
             # node_text = ("%sCC:\n%i, %i\ns:%i, d:%i"
             #                               % (node, node.x, node.y,
             #                                  node.get_size(), node.depth))
             # node_text = ("%s\nd: %s; s: %s" % ("   " + str(node), node.depth, node.get_size()))
-            node_text = ("%s\nxl: %s, xr: %s\nd:%s; s:%s" % (node.val, node.xleft.val, node.xright.val, node.depth, node.get_size()))
-            # node_text = node.val
+            # node_text = ("%s\nxl: %s, xr: %s\nd:%s; s:%s" % (node.val, node.xleft.val, node.xright.val, node.depth, node.get_size()))
+            node_text = node.val
             # node_text = ""
 
             self.canvas.create_text(x0 + cell_w/2, y0 + cell_h/2,
@@ -309,7 +311,7 @@ class TreeDraw(DrawControl):
                 # print([(node, node.x, node.y, node.xleft, node.xright) for node in self.duplicate_coords()])
                 print(self.duplicate_coords())
                 self.model.log("debug", "duplicates: %s" % self.duplicate_coords())
-                print(list(self.root.preorder()))
+                print(list(self.tree.root.preorder()))
 
                 break
             else:
