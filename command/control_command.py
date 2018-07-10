@@ -41,7 +41,10 @@ class CreateVariableCommand(object):
         Executes nested_command to get value that
         is being assigned to var_name.
         """
-        reference = self.receiver.process_command(self.nested_command)
+        # don't call process_command so nested command
+        # doesn't get printed on an extra line
+        command_obj = self.receiver.parse_command(self.nested_command)
+        reference = self.receiver.perform_command(command_obj)
 
         self.receiver.my_variables[self.var_name] = reference
 
