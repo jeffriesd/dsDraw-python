@@ -235,6 +235,17 @@ class BST:
     def __repr__(self):
         return "BST with root %s" % self.root
 
+    def __iter__(self):
+        return iter(self.root)
+
+    def preorder(self):
+        """Wrapper for TreeNode preorder"""
+        return self.root.preorder()
+
+    def postorder(self):
+        """Wrapper for TreeNode postorder"""
+        return self.root.postorder()
+
     def set_control(self, control):
         """Sets reference for control object"""
         self.control = control
@@ -271,7 +282,10 @@ class BST:
             # print("no logger ; message was %s" % message)
 
     def get_command_factory(self):
-        """Return appropriate command factory for BST"""
+        """
+        Return appropriate command factory for BST,
+        initialized with reference to 'receiver'
+        """
         return BSTCommandFactory(self)
 
     def insert(self, el, change_color=False):
@@ -436,7 +450,7 @@ class BST:
         else:
             return self._find(cur_node.right, el, change_color)
 
-    def left_rotate(self, node_a, node_b):
+    def rotate_left(self, node_a, node_b):
         """
         Perform left rotation with node_a and node_b.
 
@@ -481,6 +495,7 @@ class BST:
         else:
             a_parent = node_a.parent
 
+            # make link from parent to node_b
             if node_a.is_left_child():
                 a_parent.left = node_b
             else:
@@ -503,26 +518,9 @@ class BST:
             node.update_size()
             node = node.parent
 
-    def print_inorder(self, coords=False):
-        """
-        Wrapper to call recursive function.
-        coords designates whether to print coordinates
-        as well as node values
-        """
-        self._print_inorder(self.root, coords)
-
-    def _print_inorder(self, node, coords):
-        """
-        Recursive function to print tree in sorted ordering.
-        """
-        if node is None:
-            return
-        self._print_inorder(node.left, coords)
-        if coords:
-            print("(%s: x = %i, y = %i)" % (node, node.x, node.y))
-        else:
-            print(node, end=" ")
-        self._print_inorder(node.right, coords)
+        print("root is %s" % self.root)
+        print("children are %s" % self.root.children())
+        print("parent is %s" % self.root.parent)
 
     def setup_tr(self):
         """
