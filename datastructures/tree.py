@@ -428,6 +428,68 @@ class BST:
         else:
             return self._find(cur_node.right, el, change_color)
 
+    def left_rotate(self, node_a, node_b):
+        """
+        Perform left rotation with node_a and node_b.
+
+        precondition: node_b is right child of node_a
+        postcondition: node_a is left child of node_b
+
+        which subtrees may change?
+            - node_a
+            - node_b
+            - parent of node_a
+
+        may need to add log(n) traversal of subtrees to update
+        depths
+        """
+        # precondition
+        if node_b is not node_a.right:
+            raise ValueError("Cannot do left rotation: %s is not right child of %s"
+                             % (node_b, node_a))
+
+        # greater than a less than b,
+        # will become new right child of a
+        gt_a_lt_b = node_b.left
+
+        node_a.right = gt_a_lt_b
+        node_b.left = node_a
+
+        # special case
+        if node_a is self.root:
+            self.root = node_b
+            a_parent = None
+        else:
+            a_parent = node_a.parent
+            a_parent.right = node_b
+
+        # update nodes from bottom up,
+        # so node_a, node_b, and parent
+        for node in [node_a, node_b, a_parent]:
+            if node:
+                node.update_size()
+                node.update_extremes()
+
+
+    def swap_nodes(self, a, b):
+        """Copy both children of a and b, cut the ties and reattach"""
+
+        al = copy(a.left)
+        ar = copy(a.right)
+        bl = copy(b.left)
+        br = copy(b.right)
+
+        temp = a.val
+
+        a.left = bl
+        a.right = br
+        a.val = b.val
+
+        b.left = al
+        b.right = ar
+        b.val = temp
+
+
     def print_inorder(self, coords=False):
         """
         Wrapper to call recursive function.
@@ -677,7 +739,6 @@ class BST:
             determined relative placements"""
         self._petrify_tr(self.root, 0)
 
-
     def _petrify_tr(self, T, x):
         """Determines absolute coordinates in
             preorder traversal of the tree and
@@ -692,7 +753,6 @@ class BST:
                 T.left = None
             self._petrify_tr(T.left, x - T.par_offset)
             self._petrify_tr(T.right, x + T.par_offset)
-
 
     def setup_ws(self):
         """
@@ -750,7 +810,6 @@ class BST:
         for node in cur_node.children():
             self.add_shifts(node, modsum)
 
-
     def render(self):
         # # Reingold-Tilford algorithm
         self.setup_tr()
@@ -769,7 +828,6 @@ class BST:
 
         # print("x: %i, %i; y: %i, %i" % (self.min_x, self.max_x, self.min_y, self.max_y))
 
-
     def render_ws(self):
         """
         Wrapper function to initialize
@@ -786,7 +844,6 @@ class BST:
         ## improved WS algorithm
         # self.setup_ws()
         # self.add_shifts(self.root)
-
 
     def _render_ws(self, cur_node, depth):
         """Naive WS algorithm - doesn't center children"""

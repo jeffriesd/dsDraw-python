@@ -289,8 +289,8 @@ class TreeDraw(DrawControl):
             #                               % (node, node.x, node.y,
             #                                  node.get_size(), node.depth))
             # node_text = ("%s\nd: %s; s: %s" % ("   " + str(node), node.depth, node.get_size()))
-            # node_text = ("%s\nxl: %s, xr: %s\nd:%s; s:%s" % (node, node.xleft, node.xright, node.depth, node.get_size()))
-            node_text = node.val
+            node_text = ("%s\nxl: %s, xr: %s\nd:%s; s:%s" % (node.val, node.xleft.val, node.xright.val, node.depth, node.get_size()))
+            # node_text = node.val
             # node_text = ""
 
             self.canvas.create_text(x0 + cell_w/2, y0 + cell_h/2,
