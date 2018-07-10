@@ -10,6 +10,7 @@ from time import sleep
 from command.command_factory import ControlCommandFactory
 from util.exceptions import InvalidCommandError
 from command.sequence import CommandSequence
+import traceback
 
 
 class DrawControl:
@@ -112,12 +113,13 @@ class DrawControl:
 
             # catch logical errors,
             # e.g. trying to remove a node which isn't there
-            try:
-                return self.perform_command(command_obj)
-            except Exception as ex:
-                err_msg = "Error completing '%s': %s" % (command_text, ex)
-                self.logger.warning(err_msg)
-                self.view.console.add_line(err_msg, is_command=False)
+            # try:
+            return self.perform_command(command_obj)
+            # except Exception as ex:
+            #     err_msg = "Error completing '%s': %s" % (command_text, ex)
+            #     self.logger.warning(err_msg)
+            #
+            #     self.view.console.add_line(err_msg, is_command=False)
 
         except InvalidCommandError as err:
             # still show commands with bad syntax

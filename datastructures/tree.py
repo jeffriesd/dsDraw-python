@@ -130,7 +130,7 @@ class TreeNode:
             return
 
         child_extremes = [x for c in self.children()
-                          for x in c]
+                          for x in c.get_extremes()]
 
         # get max depth
         max_d = max([x.depth for x in child_extremes])
@@ -140,6 +140,14 @@ class TreeNode:
         self.xleft = min(deepest)
         self.xright = max(deepest)
 
+    def update_child_depths(self):
+        """"Recursively update depths in O(logn) traversal of subtree"""
+
+        for node in self.children():
+            new_depth = self.depth + 1
+            node.depth = new_depth
+            if not node.is_leaf():
+                node.update_child_depths()
 
     def get_min(self):
         """Recursive method to get minimum
@@ -453,42 +461,47 @@ class BST:
         gt_a_lt_b = node_b.left
 
         node_a.right = gt_a_lt_b
+
+        # moving node_a subtree down a level
+        # and its left subtree (right subtree
+        # comes from b.left and stays at the
+        # same depth)
         node_b.left = node_a
+        node_a.depth += 1
+        if node_a.left:
+            node_a.left.depth += 1
+            node_a.left.update_child_depths()
 
         # special case
         if node_a is self.root:
             self.root = node_b
+            node_b.parent = None
+            node_a.parent = node_b
             a_parent = None
         else:
             a_parent = node_a.parent
-            a_parent.right = node_b
 
-        # update nodes from bottom up,
-        # so node_a, node_b, and parent
-        for node in [node_a, node_b, a_parent]:
-            if node:
-                node.update_size()
-                node.update_extremes()
+            if node_a.is_left_child():
+                a_parent.left = node_b
+            else:
+                a_parent.right = node_b
 
+            # moving node_b subtree up a level
+            # and its right subtree
+            node_b.depth -= 1
+            if node_b.right:
+                node_b.right.depth -= 1
+                node_b.right.update_child_depths()
 
-    def swap_nodes(self, a, b):
-        """Copy both children of a and b, cut the ties and reattach"""
+        node_a.parent = node_b
+        node_b.parent = a_parent
 
-        al = copy(a.left)
-        ar = copy(a.right)
-        bl = copy(b.left)
-        br = copy(b.right)
-
-        temp = a.val
-
-        a.left = bl
-        a.right = br
-        a.val = b.val
-
-        b.left = al
-        b.right = ar
-        b.val = temp
-
+        # also may need to update extreme_descendants for any ancestors
+        node = node_a
+        while node:
+            node.update_extremes()
+            node.update_size()
+            node = node.parent
 
     def print_inorder(self, coords=False):
         """

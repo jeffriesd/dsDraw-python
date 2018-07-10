@@ -284,7 +284,7 @@ class DrawApp(tk.Frame):
         self.d_button.place(relwidth=0.12, relheight=0.1, relx=0.05, rely=0.875)
 
 
-        self.test_button = Button(self, bg="#333", fg="white", text="Test", command=self.control.do_full_sequence)
+        self.test_button = Button(self, bg="#333", fg="white", text="Test", command=self.control.test_dups)
         self.test_button.place(relwidth=0.12, relheight=0.1, relx=0.18, rely=0.875)
 
     def redraw(self):
