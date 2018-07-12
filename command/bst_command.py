@@ -90,8 +90,10 @@ class BSTRotateCommand(object):
 
         # get variable references from names (may not exist)
         try:
-            node_a = self.receiver.control.my_variables[self.name_a]
-            node_b = self.receiver.control.my_variables[self.name_b]
+            # node_a = self.receiver.control.my_variables[self.name_a]
+            # node_b = self.receiver.control.my_variables[self.name_b]
+            node_a = self.receiver.find(int(self.name_a), change_color=False)
+            node_b = self.receiver.find(int(self.name_b), change_color=False)
 
             if self.direction == "left":
                 self.receiver.rotate_left(node_a, node_b)
@@ -104,7 +106,22 @@ class BSTRotateCommand(object):
             raise KeyError("Reference could not be resolved: %s" % e)
 
     def undo(self):
-        pass
+        # get variable references from names (may not exist)
+        try:
+            # node_a = self.receiver.control.my_variables[self.name_a]
+            # node_b = self.receiver.control.my_variables[self.name_b]
+            node_a = self.receiver.find(int(self.name_a), change_color=False)
+            node_b = self.receiver.find(int(self.name_b), change_color=False)
+
+            if self.direction == "right":
+                self.receiver.rotate_left(node_b, node_a)
+            elif self.direction == "left":
+                self.receiver.rotate_right(node_b, node_a)
+            else:
+                raise ValueError("No such command")
+
+        except KeyError as e:
+            raise KeyError("Reference could not be resolved: %s" % e)
 
     def __repr__(self):
         return "%s ROTATE %s, %s" % (self.direction.upper(), self.name_a, self.name_b)
