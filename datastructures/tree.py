@@ -1,14 +1,13 @@
 from datastructures import graph
 from collections import defaultdict
 from util import logging_util as log
-import math
-from copy import copy
 import logging
-from time import sleep
 from command.command_factory import BSTCommandFactory
+from drawtools.render import RenderBST
+import random
 
 
-class TreeNode:
+class TreeNode(object):
     def __init__(self, val, depth=0, parent=None,
                  left=None, right=None, xleft=None, xright=None):
         """
@@ -137,15 +136,14 @@ class TreeNode:
 
         deepest = list(filter(lambda n: n.depth == max_d, child_extremes))
 
-        self.xleft = min(deepest)
-        self.xright = max(deepest)
+        self.xleft = min(deepest, key=lambda n: n.val)
+        self.xright = max(deepest, key=lambda n: n.val)
 
     def update_child_depths(self):
         """"Recursively update depths in O(logn) traversal of subtree"""
 
         for node in self.children():
-            new_depth = self.depth + 1
-            node.depth = new_depth
+            node.depth = self.depth + 1
             if not node.is_leaf():
                 node.update_child_depths()
 
@@ -214,7 +212,7 @@ class TreeNode:
         return self is self.parent.left
 
 
-class BST:
+class BST(object):
     """
     Binary search tree class. Keeps track of size,
     height of tree (max_depth), and maintains a reference
@@ -222,7 +220,7 @@ class BST:
     :param root -- root of tree
     :param minsep -- used for minimum separation in Reingold-Tilford algorithm
     """
-    def __init__(self, root=None, minsep=1):
+    def __init__(self, prebuild_size = 0, root=None, minsep=1, name=None):
         self.root = root
         self.max_depth = 0
         self.max_x = 0
@@ -232,11 +230,24 @@ class BST:
         self.size = 0
         self.minsep = minsep
 
+        # assign name for getting corresponding render object
+        self.name = name
+
+        if prebuild_size:
+            prebuild_size = int(prebuild_size)
+            numbers = list(range(prebuild_size))
+            random.shuffle(numbers)
+            for n in numbers:
+                self.insert(n)
+
     def __repr__(self):
         return "BST with root %s" % self.root
 
     def __iter__(self):
         return iter(self.root)
+
+    def set_name(self, name):
+        self.name = name
 
     def preorder(self):
         """Wrapper for TreeNode preorder"""
@@ -288,6 +299,12 @@ class BST:
         """
         return BSTCommandFactory(self)
 
+    def get_render_class(self):
+        """
+        Returns appropriate render class for BST
+        """
+        return RenderBST
+
     def insert(self, el, change_color=False):
         """
         Wrapper method to call recursive insert.
@@ -316,7 +333,7 @@ class BST:
         # change color to show traversal of tree
         if change_color:
             cur_node.color = 'red'
-            self.control.display(do_render=False, do_sleep=True)
+            self.control.my_renders[self.name].display(do_render=False, do_sleep=True)
             cur_node.color = 'white'
 
         # update depth
@@ -357,6 +374,8 @@ class BST:
             else:
                 self.root = self._remove(self.root, el, change_color)
                 self.root.update_size()
+                self.root.update_extremes()
+
         else:
             raise Exception("Can't remove %s. Not present in tree" % el)
 
@@ -372,7 +391,7 @@ class BST:
         # change color of current node to show traversal of tree
         if change_color:
             cur_node.color = 'red'
-            self.control.display(do_render=True, do_sleep=True)
+            self.control.my_renders[self.name].display(do_render=False, do_sleep=True)
             cur_node.color = 'white'
 
         if el == cur_node.val:
@@ -402,15 +421,13 @@ class BST:
                     else:
                         ps.parent.right = self._remove(ps, ps.val, change_color)
 
-                    # update extreme descendant information
-                    ps.parent.update_extremes()
-
                     # when final swap happens, make O(log n) traversal
-                    # back up to root to update sizes
+                    # back up to root to update sizes and descendants
                     if ps.is_leaf():
                         node = ps.parent
                         while node:
                             node.dec_size()
+                            node.update_extremes()
                             node = node.parent
 
         # recurse left or right
@@ -436,7 +453,7 @@ class BST:
         # change color of current node to show traversal of tree
         if change_color:
             cur_node.color = "red"
-            self.control.display(do_render=True, do_sleep=True)
+            self.control.my_renders[self.name].display(do_render=False, do_sleep=True)
             cur_node.color = "white"
 
         if cur_node.val == el:
@@ -457,33 +474,35 @@ class BST:
         precondition: node_b is right child of node_a
         postcondition: node_a is left child of node_b
 
+            A                       B
+          /  \                     / \
+         t1   B     becomes       A  t3
+             / \                 / \
+            t2  t3              t1  t2
+
         which subtrees may change?
             - node_a
             - node_b
             - parent of node_a
 
-        Had to add log(n) traversal of subtrees to update
-        depths
+        Had to add O(n) traversal of subtrees to update
+        depths and O(log(n)) walk to root to update sizes
+        and extreme descendants
         """
         # precondition
         if node_b is not node_a.right:
             msg = "Cannot do left rotation: %s is not right child of %s" % (node_b, node_a)
             raise ValueError(msg)
 
-        # greater than a less than b,
-        # will become new right child of a
-        gt_a_lt_b = node_b.left
-        node_a.right = gt_a_lt_b
+        # attach t_2 to a, its depth doesnt change
+        t_2 = node_b.left
+        node_a.right = t_2
+        if t_2:
+            t_2.parent = node_a
+        node_b.left = None
 
-        # moving node_a subtree down a level
-        # and its left subtree (right subtree
-        # comes from b.left and stays at the
-        # same depth)
+        # attach node_a as left child of node_b
         node_b.left = node_a
-        node_a.depth += 1
-        if node_a.left:
-            node_a.left.depth += 1
-            node_a.left.update_child_depths()
 
         # special case if node_a is root
         if node_a is self.root:
@@ -495,23 +514,21 @@ class BST:
             else:
                 node_a.parent.right = node_b
 
-        # moving node_b subtree up a level
-        # and its right subtree
-        node_b.depth -= 1
-        if node_b.right:
-            node_b.right.depth -= 1
-            node_b.right.update_child_depths()
-
         # update parent references
         node_b.parent = node_a.parent
         node_a.parent = node_b
 
+        # update depths from node_b
+        node_b.depth -= 1
+        node_b.update_child_depths()
+
         # also need to update extreme_descendants for any ancestors
         node = node_a
         while node:
-            node.update_extremes()
             node.update_size()
+            node.update_extremes()
             node = node.parent
+
 
     def rotate_right(self, node_a, node_b):
         """
@@ -530,15 +547,13 @@ class BST:
 
         # subtree between b and a becomes new left
         # child of node_a
-        gt_b_lt_a = node_b.right
-        node_a.left = gt_b_lt_a
+        t_2 = node_b.right
+        node_a.left = t_2
+        if t_2:
+            t_2.parent = node_a
 
-        # move a and its right subtree down a level
+        # attach node_a as right child of node_b
         node_b.right = node_a
-        node_a.depth += 1
-        if node_a.right:
-            node_a.right.depth += 1
-            node_a.right.update_child_depths()
 
         # special case if node_a is root
         if node_a is self.root:
@@ -552,9 +567,7 @@ class BST:
 
         # move b and its left subtree up a level
         node_b.depth -= 1
-        if node_b.left:
-            node_b.left.depth -= 1
-            node_b.left.update_child_depths()
+        node_b.update_child_depths()
 
         # update parent references
         node_b.parent = node_a.parent
