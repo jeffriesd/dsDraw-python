@@ -1,5 +1,8 @@
-from command.bst_command import BSTInsertCommand, BSTRemoveCommand, BSTFindCommand, BSTRotateCommand
-from command.control_command import ClearConsoleCommand, CreateVariableCommand, PrintVariableCommand
+from command.bst_command import BSTInsertCommand, BSTRemoveCommand, BSTFindCommand, \
+                                BSTRotateCommand
+from command.control_command import ClearConsoleCommand, CreateVariableCommand, \
+                                    PrintVariableCommand, CreateDataStructureCommand, \
+                                    AddToViewCommand
 from util.exceptions import InvalidCommandError
 
 
@@ -15,7 +18,9 @@ class ControlCommandFactory(object):
         self.command_list = {
             "clear": ClearConsoleCommand,
             "assign": CreateVariableCommand,
-            "print": PrintVariableCommand
+            "print": PrintVariableCommand,
+            "create": CreateDataStructureCommand,
+            "show": AddToViewCommand,
         }
 
     def create_command(self, type, *args, **kwargs):
@@ -45,7 +50,7 @@ class BSTCommandFactory(object):
             "insert": BSTInsertCommand,
             "remove": BSTRemoveCommand,
             "find": BSTFindCommand,
-            "rotate": BSTRotateCommand,
+            "rotate": BSTRotateCommand
         }
 
     def create_command(self, type, *args, **kwargs):
@@ -56,7 +61,7 @@ class BSTCommandFactory(object):
         # if command is invalid, return None. This will be propagated back to
         # the view class and interpreted as a syntax error
         try:
-            my_command = self.command_list[type.lower()]
+            my_command = self.command_list[type]
             return my_command(self.receiver, *args, **kwargs)
         except KeyError:
             raise InvalidCommandError("Invalid command for BST: '%s'" % type)
