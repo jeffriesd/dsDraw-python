@@ -4,7 +4,6 @@ from controller import drawcontrol as ctrl
 from command.bst_command import BSTInsertCommand, BSTRemoveCommand
 from collections import deque
 from textwrap import wrap
-from util.exceptions import InvalidCommandError
 
 
 class Console(Canvas):
@@ -196,9 +195,94 @@ class DrawCanvas(Canvas):
         self.width = nwidth
         self.height = nheight
 
+    def place(self, *args, **kwargs):
+        super().place(*args, **kwargs)
+        self.relx = kwargs["relx"]
+        self.rely = kwargs["rely"]
+        self.relwidth = kwargs["relwidth"]
+        self.relheight = kwargs["relheight"]
+
+    def get_geometry(self):
+        return self.relx, self.rely, self.relwidth, self.relheight
+
+
+class CompositeCanvas(DrawCanvas):
+    """
+    Composite class to handle drawing multiple canvasses
+    on the screen for multiple data structures.
+    All method calls are simply passed to all children.
+    """
+
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.parent = parent
+        self.control = self.parent.control
+        self.kwargs = kwargs
+        self.children = {}
+
+    def update(self):
+        for name, c in self.children.items():
+            c.update()
+
+    def update_child(self, name):
+        self.children[name].update()
+
+    def get_child(self, name):
+        return self.children[name]
+
+    def get_focused_child(self):
+        for _, canvas in self.children.items():
+            if canvas.focused:
+                return canvas
+
+    def new_child(self, name):
+        """
+        Create new canvas and return it, passing
+        in same kwargs that CompositeCanvas receives.
+        Geometry is calculated by splitting the most
+        recent child in half.
+        :param name:
+        :param new_canvas:
+        :return:
+        """
+        new_canvas = DrawCanvas(self, **self.kwargs)
+        focused_render = self.control.get_focused()
+
+        if focused_render:
+            focused_canvas = focused_render.canvas
+            self.split_canvas(focused_canvas, new_canvas)
+        else:
+            new_canvas.place(relx=0, rely=0,
+                             relwidth=1, relheight=1)
+
+        self.children[name] = new_canvas
+        return new_canvas
+
+    def split_canvas(self, focused_canvas, new_canvas):
+        rel_x, rel_y, rel_width, rel_height = focused_canvas.get_geometry()
+        true_height = focused_canvas.height
+        true_width = focused_canvas.width
+
+        # split along wider axis
+        if true_width > true_height:
+            _rel_width = rel_width / 2
+
+            # resize last child
+            focused_canvas.place(relx=rel_x, rely=rel_y, relwidth=_rel_width, relheight=rel_height)
+
+            # place new canvas
+            new_canvas.place(relx=rel_x + _rel_width, rely=rel_y,
+                             relwidth=_rel_width, relheight=rel_height)
+        else:
+            _rel_height = rel_height / 2
+
+            focused_canvas.place(relx=rel_x, rely=rel_y, relwidth=rel_width, relheight=_rel_height)
+            new_canvas.place(relx=rel_x, rely=rel_y + _rel_height,
+                             relwidth=rel_width, relheight=_rel_height)
+
 
 class DrawApp(tk.Frame):
-    def __init__(self, ds, control, *args, **kwargs):
+    def __init__(self, control, *args, **kwargs):
         """
         Initializes width and height assuming that
         kwargs['width'/'height'] are the screen size
@@ -206,7 +290,6 @@ class DrawApp(tk.Frame):
         :param args: args for tk.Frame
         :param kwargs: kwargs for tk.Frame
         """
-        self.ds = ds
         self.control = control
 
         self.screen_width = kwargs["width"]
@@ -263,46 +346,33 @@ class DrawApp(tk.Frame):
         self.console_input.bind("<Down>", self.console.next_command)
         self.console_input.bind("<Control-c>", self.console.clear_input)
 
-        self.insert_button = Button(self, bg="#333", fg="white", text="Insert", command=self.ins_button_clicked)
-        self.insert_button.place(relwidth=0.12, relheight=0.05, relx=0.05, rely=0.05)
-        self.insert_input = Entry(self, bg="#ccc", fg="black")
-        self.insert_input.place(relwidth=0.12, relheight=0.05, relx=0.18, rely=0.05)
-
-
-        self.remove_button = Button(self, bg="#333", fg="white", text="Remove", command=self.rem_button_clicked)
-        self.remove_button.place(relwidth=0.12, relheight=0.05, relx=0.05, rely=0.10)
-        self.remove_input = Entry(self, bg="#ccc", fg="black")
-        self.remove_input.place(relwidth=0.12, relheight=0.05, relx=0.18, rely=0.10)
-
-
         self.undo_button = Button(self, bg="#333", fg="white", text="Undo", command=self.control.undo_command)
-        self.undo_button.place(relwidth=0.25, relheight=0.1, relx=0.05, rely=0.15)
+        self.undo_button.place(relwidth=0.25, relheight=0.1, relx=0.05, rely=0.05)
 
 
-        self.canvas = DrawCanvas(self, highlightthickness=0, bg="#ccc")
+        self.canvas = CompositeCanvas(self, highlightthickness=1, highlightbackground="black", bg="#ccc")
         # setting canvas to fill right side of screen -
         #   60% width, offset 20% left of center,
         #   so 40% total
         self.canvas.place(relwidth=0.6, relheight=0.9, relx=0.35, rely=0.05)
 
-        self.d_button = Button(self, bg="#333", fg="white", text="Draw", command=self.redraw)
+        self.d_button = Button(self, bg="#333", fg="white", text="Draw", command=None)
         self.d_button.place(relwidth=0.12, relheight=0.1, relx=0.05, rely=0.875)
 
-
-        self.test_button = Button(self, bg="#333", fg="white", text="Test", command=self.control.continuous_test)
+        self.test_button = Button(self, bg="#333", fg="white", text="Test", command=None)
         self.test_button.place(relwidth=0.12, relheight=0.1, relx=0.18, rely=0.875)
 
-    def redraw(self):
-        # temporary code to reset tree each button press
-        new_tree = ctrl.build_tree(50, 0)
-        self.ds = new_tree
-        self.ds.set_logger(self.control.model_logger)
-
-        # bind data structure to control object
-        self.ds.set_control(self.control)
-        self.control.set_ds(self.ds)
-
-        self.control.display()
+    # def redraw(self):
+    #     # temporary code to reset tree each button press
+    #     new_tree = ctrl.build_tree(50, 0)
+    #     self.ds = new_tree
+    #     self.ds.set_logger(self.control.model_logger)
+    #
+    #     # bind data structure to control object
+    #     self.ds.set_control(self.control)
+    #     self.control.set_ds(self.ds)
+    #
+    #     self.control.display()
 
     def clear_canvas(self):
         self.canvas.delete("all")
@@ -317,23 +387,7 @@ class DrawApp(tk.Frame):
         command_text = self.console_input.get()
         self.logger.info("'%s' entered into command prompt." % command_text)
         self.console.clear_input()
+        # reset arrow key cycle
         self.console.reset_cycle()
 
         self.control.process_command(command_text)
-
-    def ins_button_clicked(self):
-        value = int(self.insert_input.get())
-        command = BSTInsertCommand(self.ds, value, change_color=True)
-
-        # self.control.do_command(command)
-        self.control.add_to_sequence(command)
-
-    def rem_button_clicked(self):
-        try:
-            value = int(self.remove_input.get())
-        except ValueError:
-            value = self.ds.root.val
-        command = BSTRemoveCommand(self.ds, value, change_color=True)
-
-        # self.control.do_command(command)
-        self.control.add_to_sequence(command)
