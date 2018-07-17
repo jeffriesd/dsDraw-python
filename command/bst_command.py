@@ -1,4 +1,4 @@
-
+from datastructures import tree
 
 class BSTInsertCommand(object):
 
@@ -125,3 +125,26 @@ class BSTRotateCommand(object):
 
     def __repr__(self):
         return "%s ROTATE %s, %s" % (self.direction.upper(), self.name_a, self.name_b)
+
+
+class CreateBSTCommand(object):
+    def __init__(self, receiver, *other_args, should_redraw=True, change_color=True):
+        """
+        Simply returns a new, empty BST. Optional other args are passed
+        to BST constructor.
+        Adding receiver as every command uses it and it is passed in
+        by command_factory
+        """
+        self.receiver = receiver
+        self.other_args = other_args
+        self.should_redraw = should_redraw
+        self.change_color = change_color
+
+    def execute(self):
+        return tree.BST(*self.other_args)
+
+    def undo(self):
+        pass
+
+    def __repr__(self):
+        return "CREATE BST"
