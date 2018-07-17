@@ -1,3 +1,5 @@
+from tkinter import Canvas
+import datastructures
 
 class ClearConsoleCommand(object):
     def __init__(self, receiver, should_redraw=False):
@@ -49,7 +51,7 @@ class CreateVariableCommand(object):
         self.receiver.my_variables[self.var_name] = reference
 
     def undo(self):
-        self.receiver.my_variables[self.var_name] = None
+        del self.receiver.my_variables[self.var_name]
 
     def __repr__(self):
         return "ASSIGN '%s' to reference returned by '%s'" % (self.var_name, self.nested_command)
@@ -86,4 +88,39 @@ class PrintVariableCommand(object):
         pass
 
 
+class CreateDataStructureCommand(object):
+    def __init__(self, receiver, model_type_name, *other_args, should_redraw=True):
+        """
+        Returns a new empty model created by ModelFactory.
+        e.g. 'create bst'
+        """
+        self.receiver = receiver
+        self.should_redraw = should_redraw
+        self.model_name = model_type_name
+        self.other_args = other_args
+        self.factory = datastructures.ModelFactory()
 
+    def execute(self):
+        return self.factory.create_model(self.model_name, *self.other_args)
+
+    def undo(self):
+        del self.receiver.my_models[self.model_name]
+
+    def __repr__(self):
+        return "CREATED NEW %s" % self.model_name
+
+
+class AddToViewCommand(object):
+    def __init__(self, receiver, model_name, should_redraw=True):
+        self.receiver = receiver
+        self.model_name = model_name
+        self.should_redraw = should_redraw
+
+    def execute(self):
+        self.receiver.add_model_to_view(self.model_name)
+
+    def undo(self):
+        pass
+
+    def __repr__(self):
+        return "ADDED %s TO VIEW" % self.model_name
