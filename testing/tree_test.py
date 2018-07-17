@@ -2,6 +2,8 @@ import unittest
 from util import build_tree
 import random
 from datastructures import tree
+from screeninfo import get_monitors
+from tkinter import Tk
 
 
 class GenericBSTTest(unittest.TestCase):
@@ -16,9 +18,9 @@ class GenericBSTTest(unittest.TestCase):
         self.tree = tree.BST()
         self.size = 500
 
-        numbers = random.sample(list(range(self.size * 2)), self.size)
+        self.original_values = random.sample(list(range(self.size * 2)), self.size)
 
-        for n in numbers:
+        for n in self.original_values:
             self.tree.insert(n)
 
     def test_sizes(self):
@@ -26,8 +28,8 @@ class GenericBSTTest(unittest.TestCase):
         for node in self.tree.root:
             size = 0
 
-            # TreeNode class iterator produces inorder traversal
-            for subchild in node:
+            # iterate through subtree (including root node)
+            for _ in node:
                 size += 1
             self.assertEqual(node.get_size(), size)
 
@@ -36,22 +38,21 @@ class GenericBSTTest(unittest.TestCase):
             making node-to-root traversal for each subtree.
             Root node has depth 0"""
 
-        for node in self.tree.root:
-            depth = 0
+        self._test_depths(self.tree.root, 0)
 
-            cursor = node
-            while cursor is not self.tree.root:
-                cursor = cursor.parent
-                depth += 1
+    def _test_depths(self, cur_node, depth):
+        if not cur_node:
+            return
+        self._test_depths(cur_node.left, depth+1)
+        self.assertEqual(cur_node.depth, depth)
+        self._test_depths(cur_node.right, depth+1)
 
-            # check this depth against stored depth value
-            self.assertEqual(depth, node.depth)
 
     def test_bst_property(self):
         """Check binary search tree property satistfying
             left <= parent < right"""
 
-        for node in self.tree.root:
+        for node in self.tree:
             # left <= parent
             if node.left_child():
                 self.assertLessEqual(node.left_child().val, node.val)
@@ -59,7 +60,25 @@ class GenericBSTTest(unittest.TestCase):
                 self.assertLess(node.val, node.right_child().val)
 
     def test_extreme_descendants(self):
-        pass
+        """
+        Test if extreme descendants are correct for all subtrees.
+        Extreme descendants are min/max values of those
+        at deepest level of subtree.
+        """
+
+        for subtree in self.tree:
+            if subtree.is_leaf():
+                xleft = xright = subtree
+            else:
+                all_descendants = list(subtree)
+                max_d = max([node.depth for node in all_descendants])
+                only_max_depth = list(filter(lambda n: n.depth == max_d, all_descendants))
+                xleft = min(only_max_depth, key=lambda n: n.val)
+                xright = max(only_max_depth, key=lambda n: n.val)
+
+            self.assertEqual(xleft, subtree.xleft, msg="Extreme left of %s should be %s" % (subtree, xleft))
+            self.assertEqual(xright, subtree.xright, msg="Extreme right of %s should be %s" % (subtree, xright))
+
 
     def test_duplicate_coordinates(self):
         """
@@ -70,9 +89,8 @@ class GenericBSTTest(unittest.TestCase):
         self.tree.render()
 
         all_xy = [(node.x, node.y) for node in self.tree.root]
-        all_1 = all([all_xy.count((node.x, node.y)) == 1 for node in self.tree.root])
 
-        for node in self.tree.root:
+        for node in self.tree:
             coordinate = (node.x, node.y)
             # check that each coordinate only occurs once
             occurrences = all_xy.count(coordinate)
@@ -82,25 +100,42 @@ class GenericBSTTest(unittest.TestCase):
             self.assertEqual(occurrences, 1, msg=message)
 
 
-class GenericBSTRemoveTest(unittest.TestCase):
+class GenericBSTRemoveTest(GenericBSTTest):
 
     def setUp(self):
-        """Build a BST of size 50 using only inserts"""
-        self.tree = tree.BST()
-        self.size = 500
+        """Build a BST of size self.size and then remove half of them."""
+        super().setUp()
 
-        numbers = random.sample(list(range(self.size * 2)), self.size)
-
-        for n in numbers:
-            self.tree.insert(n)
-
-        to_remove = random.sample(numbers, self.size // 2)
+        to_remove = random.sample(self.original_values, self.size // 2)
 
         for n in to_remove:
             self.tree.remove(n)
+
+
+class GenericBSTRotateTest(GenericBSTTest):
+
+    def setUp(self):
+        """Build a BST and then randomly rotate some nodes"""
+        super().setUp()
+
+        r = self.tree.root
+        rr = r .right
+
+        self.tree.rotate_left(r, rr)
+
+        nodes = list(self.tree)
+
+        for n in random.sample(nodes, self.size // 2):
+            r = n.right_child()
+            l = n.left_child()
+            if r:
+                self.tree.rotate_left(n, r)
+            elif l:
+                self.tree.rotate_right(n, l)
 
 
 
 
 if __name__ == '__main__':
     unittest.main()
+
