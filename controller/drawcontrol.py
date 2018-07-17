@@ -10,11 +10,10 @@ from time import sleep
 from command.command_factory import ControlCommandFactory
 from util.exceptions import InvalidCommandError
 from command.sequence import CommandSequence
-import traceback
 
 
 class DrawControl:
-    def __init__(self, model=None, master=None, width=800, height=600):
+    def __init__(self, master=None, width=800, height=600):
         """
         Constructor for main controller class
         :param model: data structure being drawn
@@ -30,30 +29,14 @@ class DrawControl:
         # clear logging file
         self.clear_log()
 
-        self.model = model
-        self.model.ctrl = self
-        self.model.set_logger(self.model_logger)
-        self.model.set_control(self)
-
         # creating main view (subclass of tk.Frame)
         # and passing in data structure
         self.view = view.DrawApp(master=master, width=width, height=height,
-                                 ds=model, control=self, background="#333")
+                                 control=self, background="#333")
         self.view.set_logger(self.view_logger)
 
         self.logger.info("\n\n\t----- new run -----\n")
         self.logger.info("created main view")
-
-        # initialize command state
-        self.last_command = None
-
-        self.canvas = self.view.canvas
-
-        # time in seconds for animation to occur
-        self.tick = .15
-
-        self.cell_w = -1
-        self.cell_h = -1
 
         # use stack to keep track of command history
         self.command_history = deque()
@@ -64,6 +47,53 @@ class DrawControl:
         # use dictionary to store user-defined variables
         self.my_variables = {}
 
+        # use dictionary to store render objects for redrawing
+        self.my_renders = {}
+
+    def add_model_to_view(self, model_name):
+        """
+        Assume a model has already been instantiated and
+        assigned a name. Raises exception if name
+        already assigned.
+        :param model:
+        :return:
+        """
+        if model_name in self.my_renders:
+            raise Exception("Error. Model '%s' already assigned to a render object" % model_name)
+
+        my_model = self.my_variables[model_name]
+        my_model.set_control(self)
+        my_model.set_name(model_name)
+        my_model.set_logger(self.model_logger)
+
+        # create a new canvas and
+        # corresponding render object
+        new_canvas = self.view.canvas.new_child(model_name)
+
+        # add click to raise functionality
+        new_canvas.bind("<Button-1>", lambda ev: self.give_focus(model_name))
+
+        render_class = my_model.get_render_class()
+        my_render = render_class(my_model, new_canvas, name=model_name)
+
+        # bind render object to name
+        self.my_renders[model_name] = my_render
+
+        self.give_focus(model_name)
+
+    def give_focus(self, render):
+        """
+        Gives focus to a render object based on name
+        or by passing on the object itself
+        """
+        for name, render_obj in self.my_renders.items():
+            render_obj.focused = (name == render) or (render_obj == render)
+        self.display(do_sleep=False)
+
+    def get_focused(self):
+        for name, render_obj in self.my_renders.items():
+            if render_obj.focused:
+                return render_obj
 
     def clear_log(self):
         """Open log and immediately close stream to empty file contents"""
@@ -77,13 +107,17 @@ class DrawControl:
 
             Assume receiver is model unless '/' present as first character,
             in which case it's a command for the control object"""
-        # handle control-command special case
-        if command_text[0] == "/":
-            my_command_factory = ControlCommandFactory(self)
-            command_text = command_text[1:]
 
+        spl = command_text.split(" ")
+
+        # handle special case for command on model
+        if "." in spl[0]:
+            model_name, command_text = command_text.split(".")
+            model = self.my_variables[model_name]
+            my_command_factory = model.get_command_factory()
+            self.give_focus(model_name)
         else:
-            my_command_factory = self.model.get_command_factory()
+            my_command_factory = ControlCommandFactory(self)
 
         spl = command_text.split(" ")
         command_type = spl[0]
@@ -114,7 +148,12 @@ class DrawControl:
             # catch logical errors,
             # e.g. trying to remove a node which isn't there
             try:
-                return self.perform_command(command_obj)
+                ret_value = self.perform_command(command_obj)
+
+                # add it to command history for undoing
+                self.command_history.appendleft(command_obj)
+
+                return ret_value
             except Exception as ex:
                 err_msg = "Error completing '%s': %s" % (command_text, ex)
                 self.logger.warning(err_msg)
@@ -139,12 +178,20 @@ class DrawControl:
         """
 
         self.logger.info("Performing %s on %s" % (command_obj, command_obj.receiver))
-        self.command_history.appendleft(command_obj)
 
         command_value = command_obj.execute()
 
         if command_obj.should_redraw:
-            self.display()
+            if command_obj.receiver is self:
+                self.display(do_sleep=False)
+            else:
+                # show animations and only update
+                # relevant canvas
+                try:
+                    render_obj = self.my_renders[command_obj.receiver.name]
+                    render_obj.display()
+                except KeyError:
+                    raise Exception("Error updating canvas for '%s'. No corresponding render object" % command_obj.receiver)
 
         return command_value
 
@@ -160,11 +207,12 @@ class DrawControl:
             if last_command.should_redraw:
                 self.display()
 
+            self.view.console.add_line("Undoing \"%s\"" % last_command)
+
         except IndexError as e:
             err_msg = "Error: Nothing left to undo"
             self.logger.error(err_msg)
             self.view.console.add_line(err_msg, is_command=False)
-
 
     def add_to_sequence(self, command_obj):
         """
@@ -186,19 +234,8 @@ class DrawControl:
             clears canvas, and draws to canvas
             :param do_render - flag whether to run render algorithm again or not
             :param do_sleep - flag whether to pause for animation purposes or not"""
-
-        if do_render:
-            self.model.render()
-
-        # determine node sizes
-        self.preprocess()
-
-        self.view.clear_canvas()
-        self.draw_on_canvas()
-
-        if do_sleep:
-            self.canvas.update()
-            sleep(self.tick)
+        for _, render in self.my_renders.items():
+            render.display(do_render, do_sleep)
 
     def preprocess(self):
         """Determines relative sizes/aspect ratios of data structures"""
@@ -209,152 +246,6 @@ class DrawControl:
         pass
 
 
-class TreeDraw(DrawControl):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.logger.info("using tree mode")
-        self.tree = self.model
-
-        self.test_thread = None
-
-        self.view.mainloop()
-
-    def set_ds(self, new_ds):
-        self.model = new_ds
-        self.tree = new_ds
-
-    def duplicate_coords(self):
-        all_xy = [(node.x, node.y) for node in self.tree]
-        all_1 = all([all_xy.count((node.x, node.y)) == 1 for node in self.tree])
-        if all_1:
-            # print("only 1 of each coordinate!")
-            return None
-        else:
-            # print("duplicate coordinates. BAD!!!!!")
-            return [node for node in self.tree.root
-                    if all_xy.count((node.x, node.y)) != 1]
-
-    def preprocess(self):
-        """Determines actual size of each node.
-            Called after tree.render() because value
-            ranges needed for x and y"""
-        self.logger.debug("entering preprocess stage")
-        width = self.canvas.width
-        height = self.canvas.height
-
-        self.cell_w = width / (self.tree.max_x - self.tree.min_x + 1)
-        self.cell_h = height / (self.tree.max_y - self.tree.min_y + 1)
-
-        self.logger.debug("cell size set; width: %s, height: %s" % (self.cell_w, self.cell_h))
-
-    def draw_on_canvas(self, circle=False):
-        """
-        Determines size of each cell to be drawn and
-        iterates through tree, drawing edges first, then
-        nodes in an inorder traversal.
-        :param circle: if True, draw nodes as circles
-        """
-        # if circle set to True, then
-        # pick smaller of width/height
-
-        if circle:
-            cell_w = cell_h = min(self.cell_w, self.cell_h)
-        else:
-            cell_w = self.cell_w
-            cell_h = self.cell_h
-
-        # traverse tree in preorder so lines get drawn
-        # first and nodes are placed on top
-        for node in self.tree.preorder():
-            x0 = node.x * cell_w
-            y0 = node.y * cell_h
-            for c in node.children():
-                x1 = c.x * cell_w
-                y1 = c.y * cell_h
-                center_offsets = [cell_w/2, cell_h/2] * 2
-
-                pts = [x0, y0, x1, y1]
-                centers = [pt + off for pt, off in zip(pts, center_offsets)]
-
-                # show color for bst property
-                color = "blue" if c.val <= node.val else "red"
-                color = "green" if c.val == node.val else color
-                self.canvas.create_line(*centers, fill=color, width=2)
-
-            # draw nodes at 50% size as to not block
-            # drawing of edges
-            x0_n, y0_n = [x0 + cell_w/4, y0 + cell_h/4]
-
-            self.logger.debug("Drawing Node(%s) at %.2f, %.2f" % (node.val, x0_n, y0_n))
-
-            self.canvas.create_oval(x0_n, y0_n, x0_n + cell_w/2, y0_n + cell_h/2, fill=node.color)
-            # node_text = ("%sCC:\n%i, %i\ns:%i, d:%i"
-            #                               % (node, node.x, node.y,
-            #                                  node.get_size(), node.depth))
-            # node_text = ("%s\nd: %s; s: %s" % ("   " + str(node), node.depth, node.get_size()))
-            node_text = ("%s\nxl: %s, xr: %s\nd:%s; s:%s" % (node.val, node.xleft.val, node.xright.val, node.depth, node.get_size()))
-            # node_text = node.val
-            # node_text = ""
-
-            self.canvas.create_text(x0 + cell_w/2, y0 + cell_h/2,
-                                    text=node_text)
-
-    def test_dups(self):
-        """Tests for duplicate coordinates"""
-        while True:
-            self.view.redraw()
-            self.tree.render()
-            self.preprocess()
-            if self.duplicate_coords():
-                # print("v, x, y, xleft, xright")
-                # print([(node, node.x, node.y, node.xleft, node.xright) for node in self.duplicate_coords()])
-                print(self.duplicate_coords())
-                self.model.log("debug", "duplicates: %s" % self.duplicate_coords())
-                print(list(self.tree.root.preorder()))
-
-                break
-            else:
-                print("all good")
-
-        self.display()
-
-    def continuous_test(self, sleep_time=.05):
-        if not self.test_thread:
-            self.test_thread = TestThread(target=self.view.redraw, sleep_time=sleep_time)
-            self.test_thread.start()
-        else:
-            self.test_thread.stop()
-            self.test_thread = None
-
-
-def build_tree(n, max_val, t=None):
-    """Builds a tree of unique integer elements"""
-    t = tree.BST() if t is None else t
-    max_val = max(max_val, n)
-    r_set = random.sample(range(max_val), n)
-    for x in r_set:
-        t.insert(x)
-    return t
-
-
-def my_tree(size=0):
-    t = tree.BST()
-
-    nodes = [9, 6, 0, 3, 2, 1, 4, 5, 7, 8, 10, 14, 13, 12, 11]
-
-    if size:
-        nodes = random.sample(list(range(size)), size)
-
-        # special easy case
-        if size == 9:
-            nodes = [4, 1, 5, 0, 2, 7, 3, 6, 8]
-
-    for n in nodes:
-        t.insert(n)
-    return t
-
-
 def main():
     # function from screeninfo library to
     # get screen dimensions
@@ -362,11 +253,10 @@ def main():
     width = dim.width
     height = dim.height
 
-    t = my_tree()
-
     root = Tk()
 
-    TreeDraw(t, root, width, height)
+    d = DrawControl(root, width, height)
+    d.view.mainloop()
 
 if __name__ == '__main__':
     main()
