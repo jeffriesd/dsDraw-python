@@ -59,7 +59,7 @@ class DrawControl:
         :return:
         """
         if model_name in self.my_renders:
-            raise Exception("Error. Model '%s' already assigned to a render object" % model_name)
+            raise Exception("Model '%s' already assigned to a render object" % model_name)
 
         my_model = self.my_variables[model_name]
         my_model.set_control(self)
