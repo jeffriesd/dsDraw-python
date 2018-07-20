@@ -1,4 +1,5 @@
 from time import sleep
+from collections import defaultdict
 
 
 class RenderTree(object):
@@ -15,13 +16,16 @@ class RenderTree(object):
         self.name = name
 
         # used for centering tree on canvas
-        self.max_x = -1
-        self.max_y = -1
+        self.max_x = 0
+        self.max_y = 0
+        self.min_x = 0
+        self.min_y = 0
 
         # minimum separation between nodes
         # on the same level
         self.minsep = 1
 
+        #
         self.tick = .15
         self.focused = False
 
@@ -67,7 +71,7 @@ class RenderTree(object):
         self.cell_w = width / (self.max_x - self.min_x + 1)
         self.cell_h = height / (self.max_y - self.min_y + 1)
 
-        # self.model.logger.debug("cell size set; width: %s, height: %s" % (self.cell_w, self.cell_h))
+        self.model.logger.debug("cell size set; width: %s, height: %s" % (self.cell_w, self.cell_h))
 
     def draw_on_canvas(self, circle=False):
         """
@@ -116,7 +120,7 @@ class RenderTree(object):
             #                               % (node, node.x, node.y,
             #                                  node.get_size(), node.depth))
             # node_text = ("%s\nd: %s; s: %s" % ("   " + str(node), node.depth, node.get_size()))
-            # node_text = ("%s\nxl: %s, xr: %s\nd:%s; s:%s" % (node.val, node.xleft.val, node.xright.val, node.depth, node.get_size()))
+            # node_text = ("%s\nxl: %s, xr: %s\nd:%s; s:%s" % (node.val, node.get_xleft().val, node.get_xright().val, node.depth, node.get_size()))
             node_text = node.val
             # node_text = ""
 
@@ -125,6 +129,10 @@ class RenderTree(object):
 
     def render(self):
         # # Reingold-Tilford algorithm
+
+        # do a O(n) pass to update depths and extreme descendants
+        self.tree.root.update_child_depths()
+        self.tree.root.update_descendants_bottom_up()
 
         self.setup_tr()
         self.petrify_tr()
@@ -147,19 +155,19 @@ class RenderTree(object):
         """
         Wrapper function for Reingold-Tilford algorithm
         """
-        self._setup_tr(self.tree.root, 0, self.tree.root.xleft, self.tree.root.xright)
+        self._setup_tr(self.tree.root, 0, self.tree.root.get_xleft(), self.tree.root.get_xright())
 
     def _setup_tr(self, T, depth, rmost, lmost):
         MINSEP = self.minsep
         LL = LR = RL = RR = None
 
         if T:
-            L = T.left
-            R = T.right
-            LL = L.xleft if L else None
-            LR = L.xright if L else None
-            RR = R.xright if R else None
-            RL = R.xleft if R else None
+            L = T.left_child()
+            R = T.right_child()
+            LL = L.get_xleft() if L else None
+            LR = L.get_xright() if L else None
+            RR = R.get_xright() if R else None
+            RL = R.get_xleft() if R else None
 
         CURSEP = ROOTSEP = 0
         LOFFSUM = ROFFSUM = 0
@@ -176,8 +184,8 @@ class RenderTree(object):
 
             T.y = depth
             # T.depth = depth
-            L = T.left
-            R = T.right
+            L = T.left_child()
+            R = T.right_child()
 
             self._setup_tr(L, depth + 1, LR, LL)
             self._setup_tr(R, depth + 1, RR, RL)
@@ -188,7 +196,7 @@ class RenderTree(object):
                      indent=depth)
 
             # if T is a leaf
-            if not (T.left or T.right):
+            if not (T.left_child() or T.right_child()):
                 self.model.log("debug", "%s is a leaf" % T, indent=depth)
                 rmost = T
                 lmost = T
@@ -223,7 +231,7 @@ class RenderTree(object):
                         CURSEP = MINSEP
 
                     # advance L and R along respective contours
-                    if L.right:
+                    if L.right_child():
                         LOFFSUM += L.par_offset
                         self.model.log("debug", "IN WHILE: LOFFSUM += %s; NOW = %s" % (L.par_offset, LOFFSUM),
                                  indent=depth)
@@ -232,9 +240,9 @@ class RenderTree(object):
                                  indent=depth)
                         CURSEP -= L.par_offset
 
-                        self.model.log("debug", "IN WHILE: L -> %s" % L.right,
+                        self.model.log("debug", "IN WHILE: L -> %s" % L.right_child(),
                                  indent=depth)
-                        L = L.right
+                        L = L.right_child()
                     else:
                         LOFFSUM -= L.par_offset
                         self.model.log("debug", "IN WHILE: LOFFSUM -= %s; NOW = %s" % (L.par_offset, LOFFSUM),
@@ -243,11 +251,11 @@ class RenderTree(object):
                         self.model.log("debug", "IN WHILE: CURSEP += L.offset: %s" % L.par_offset,
                                  indent=depth)
                         CURSEP += L.par_offset
-                        self.model.log("debug", "IN WHILE: L -> %s" % L.left,
+                        self.model.log("debug", "IN WHILE: L -> %s" % L.left_child(),
                                  indent=depth)
-                        L = L.left
+                        L = L.left_child()
 
-                    if R.left:
+                    if R.left_child():
                         ROFFSUM -= R.par_offset
                         self.model.log("debug", "IN WHILE: ROFFSUM += %s; NOW = %s" % (R.par_offset, ROFFSUM),
                                  indent=depth)
@@ -255,9 +263,9 @@ class RenderTree(object):
                         self.model.log("debug", "IN WHILE: CURSEP -= R.offset: %s" % R.par_offset,
                                  indent=depth)
                         CURSEP -= R.par_offset
-                        self.model.log("debug", "IN WHILE: R -> %s" % R.left,
+                        self.model.log("debug", "IN WHILE: R -> %s" % R.left_child(),
                                  indent=depth)
-                        R = R.left
+                        R = R.left_child()
                     else:
                         ROFFSUM += R.par_offset
                         self.model.log("debug", "IN WHILE: ROFFSUM += %s; NOW = %s" % (R.par_offset, ROFFSUM),
@@ -266,9 +274,9 @@ class RenderTree(object):
                         self.model.log("debug", "IN WHILE: CURSEP += R.offset: %s" % R.par_offset,
                                  indent=depth)
                         CURSEP += R.par_offset
-                        self.model.log("debug", "IN WHILE: R -> %s" % R.right,
+                        self.model.log("debug", "IN WHILE: R -> %s" % R.right_child(),
                                  indent=depth)
-                        R = R.right
+                        R = R.right_child()
 
                 self.model.log("debug", "WHILE TERMINATED", indent=depth)
 
@@ -290,7 +298,7 @@ class RenderTree(object):
 
                 self.model.log("debug", "UPDATING EXTREME DESCENDANTS", indent=depth)
                 # update extreme descendants information
-                if T.left is None or ((RL and LL) and RL.depth > LL.depth):
+                if T.left_child() is None or ((RL and LL) and RL.depth > LL.depth):
                     lmost = RL
                     lmost.root_offset += T.par_offset
                     self.model.log("debug", "%s.root_offset += T.par: %s; NOW = %s" % (lmost, T.par_offset, lmost.root_offset),
@@ -308,7 +316,7 @@ class RenderTree(object):
                 self.model.log("debug", "lmost = %s" % lmost, indent=depth)
 
                 # if LR and RR:
-                if T.right is None or ((LR and RR) and LR.depth > RR.depth):
+                if T.right_child() is None or ((LR and RR) and LR.depth > RR.depth):
                     rmost = LR
                     rmost.root_offset -= T.par_offset
                     self.model.log("debug", "%s.root_offset -= T.par: %s; NOW = %s" % (rmost, T.par_offset, rmost.root_offset),
@@ -332,7 +340,7 @@ class RenderTree(object):
                 # if subtrees of T have different heights,
                 # check if threading necessary - at most 1 thread
                 # will be inserted
-                if L and L is not T.left:
+                if L and L is not T.left_child():
                     # create a thread
                     RR.has_thread = True
                     RR.par_offset = abs((RR.root_offset + T.par_offset) - LOFFSUM)
@@ -343,11 +351,11 @@ class RenderTree(object):
                              indent=depth)
                     self.model.log("debug", "THREADING (L) %s to %s" % (RR, L), indent=depth)
                     if LOFFSUM - T.par_offset <= RR.root_offset:
-                        RR.left = L
+                        RR.set_left(L)
                     else:
-                        RR.right = L
+                        RR.set_right(L)
 
-                elif R and R is not T.right:
+                elif R and R is not T.right_child():
                     # create a thread
                     LL.has_thread = True
                     LL.par_offset = abs((LL.root_offset - T.par_offset) - ROFFSUM)
@@ -359,9 +367,9 @@ class RenderTree(object):
 
                     self.model.log("debug", "THREADING (R) %s to %s" % (LL, R), indent=depth)
                     if ROFFSUM + T.par_offset >= LL.root_offset:
-                        LL.right = R
+                        LL.set_right(R)
                     else:
-                        LL.left = R
+                        LL.set_left(R)
                 self.model.log("debug", "DONE THREADING", indent=depth)
 
     def petrify_tr(self):
@@ -381,9 +389,97 @@ class RenderTree(object):
             T.x = x
             if T.has_thread:
                 T.has_thread = False
-                T.right = None
-                T.left = None
-            self._petrify_tr(T.left, x - T.par_offset)
-            self._petrify_tr(T.right, x + T.par_offset)
+                T.set_right(None)
+                T.set_left(None)
+            self._petrify_tr(T.left_child(), x - T.par_offset)
+            self._petrify_tr(T.right_child(), x + T.par_offset)
+
+    def setup_ws(self):
+        """
+        Wrapper function to initialize next_xs
+        and offset dictionaries and call
+        recursive function
+        """
+        self.next_xs = defaultdict(int)
+        self.offsets = defaultdict(int)
+
+        self._setup_ws(self.tree.root, 0)
+
+    def _setup_ws(self, cur_node, depth):
+        # assign coordinates in bottom up fashion (postorder)
+        for node in cur_node.children():
+            self._setup_ws(node, depth + 1)
+
+        cur_node.y = depth
+
+        if cur_node.is_leaf():
+            # if node is a leaf, simply assign
+            # it the next available x coord
+            place = self.next_xs[depth]
+            cur_node.x = place
+        elif len(cur_node.children()) == 1:
+            # if one child, place just left of child
+            child = cur_node.children()[0]
+            if child.val <= cur_node.val:
+                place = child.x + 1
+            else:
+                place = child.x - 1
+        else:
+            # if two children, center over children
+            xsum = cur_node.left_child().x + cur_node.right_child().x
+            place = xsum / 2
+
+        # determine offset
+        self.offsets[depth] = max(self.offsets[depth], self.next_xs[depth] - place)
+
+        if not cur_node.is_leaf():
+            cur_node.x = place + self.offsets[depth]
+
+        self.next_xs[depth] += 2
+        cur_node.shift = self.offsets[depth]
+
+    def add_shifts(self, cur_node, modsum=0):
+        """
+        Recursively add x shifts in an
+        inorder traversal to place nodes
+        in final position
+        """
+        cur_node.x = cur_node.x + modsum
+        modsum += cur_node.shift
+
+        for node in cur_node.children():
+            self.add_shifts(node, modsum)
+
+    def render_ws(self):
+        """
+        Wrapper function to initialize
+        'nexts' list and call recursive
+        function (Wetherell-Shannon algorithm)
+        """
+        # NAIVE WS ALGORITHM
+        self.next_xs = [0] * (self.tree.max_depth + 1 + 1)
+        self.max_x = 0
+        self.max_y = 0
+        self._render_ws(self.tree.root, 0)
+
+        ## improved WS algorithm
+        # self.setup_ws()
+        # self.add_shifts(self.root)
+
+    def _render_ws(self, cur_node, depth):
+        """Naive WS algorithm - doesn't center children"""
+        x = self.next_xs[depth]
+        y = depth
+
+        cur_node.x = x
+        cur_node.y = y
+
+        self.max_x = max(x, self.max_x)
+
+        self.max_y = max(y, self.max_y)
+
+        self.next_xs[depth] += 1
+        for node in cur_node.children():
+            self._render_ws(node, depth + 1)
 
 

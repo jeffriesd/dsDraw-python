@@ -101,6 +101,12 @@ class TreeNode(object):
     def right_child(self):
         return self.right
 
+    def set_left(self, node):
+        self.left = node
+
+    def set_right(self, node):
+        self.right = node
+
     def is_leaf(self):
         return not self.left and not self.right
 
@@ -122,6 +128,12 @@ class TreeNode(object):
     def get_extremes(self):
         return [self.xleft, self.xright]
 
+    def get_xleft(self):
+        return self.xleft
+
+    def get_xright(self):
+        return self.xright
+
     def update_extremes(self):
         if self.is_leaf():
             self.xleft = self
@@ -139,13 +151,30 @@ class TreeNode(object):
         self.xleft = min(deepest, key=lambda n: n.val)
         self.xright = max(deepest, key=lambda n: n.val)
 
-    def update_child_depths(self):
-        """"Recursively update depths in O(logn) traversal of subtree"""
+    def update_child_depths(self, depth=0):
+        """"Recursively update depths in O(n) traversal of subtree"""
+        self._update_child_depths(self, depth)
 
-        for node in self.children():
-            node.depth = self.depth + 1
-            if not node.is_leaf():
-                node.update_child_depths()
+    def _update_child_depths(self, cur_node, depth):
+        if cur_node is None:
+            return
+        cur_node.depth = depth
+        self._update_child_depths(cur_node.left, depth+1)
+        self._update_child_depths(cur_node.right, depth+1)
+
+
+    def update_descendants_bottom_up(self):
+        self._update_descendants_bottom_up(self)
+
+    def _update_descendants_bottom_up(self, cur_node):
+
+        if cur_node is None:
+            return
+
+        self._update_descendants_bottom_up(cur_node.left)
+        self._update_descendants_bottom_up(cur_node.right)
+
+        cur_node.update_extremes()
 
     def get_min(self):
         """Recursive method to get minimum
@@ -200,12 +229,6 @@ class TreeNode(object):
             return self.predecessor()
         elif self.right_child():
             return self.successor()
-        # pred = self.predecessor()
-        # succ = self.successor()
-        # if pred.is_leaf():
-        #     return pred
-        # elif succ.is_leaf():
-        #     return succ
         return None
 
     def is_left_child(self):
@@ -213,20 +236,12 @@ class TreeNode(object):
 
 
 class Tree(object):
-    def __init__(self, prebuild_size = 0, root=None, minsep=1, name=None):
+    def __init__(self, root=None, name=None):
         self.root = root
         self.max_depth = 0
-        self.size = 0
 
         # assign name for getting corresponding render object
         self.name = name
-
-        if prebuild_size:
-            prebuild_size = int(prebuild_size)
-            numbers = list(range(prebuild_size))
-            random.shuffle(numbers)
-            for n in numbers:
-                self.insert(n)
 
     def __repr__(self):
         return "Tree structure with root %s" % self.root
@@ -280,329 +295,32 @@ class Tree(object):
             pass
             # print("no logger ; message was %s" % message)
 
-    def setup_tr(self):
+
+    def get_render_class(self):
         """
-        Wrapper function for Reingold-Tilford algorithm
+        Returns appropriate render class for BST
         """
-        self._setup_tr(self.root, 0, self.root.xleft, self.root.xright)
-
-    def _setup_tr(self, T, depth, rmost, lmost):
-        MINSEP = self.minsep
-        LL = LR = RL = RR = None
-
-        if T:
-            L = T.left
-            R = T.right
-            LL = L.xleft if L else None
-            LR = L.xright if L else None
-            RR = R.xright if R else None
-            RL = R.xleft if R else None
-
-        CURSEP = ROOTSEP = 0
-        LOFFSUM = ROFFSUM = 0
-
-        # base case when past leaves
-        if T is None:
-            if lmost:
-                lmost.depth = -1
-            if rmost:
-                rmost.depth = -1
-            return
-        else:
-            # T.update_extremes()
-
-            T.y = depth
-            # T.depth = depth
-            L = T.left
-            R = T.right
-
-            self._setup_tr(L, depth + 1, LR, LL)
-            self._setup_tr(R, depth + 1, RR, RL)
-
-            self.log("debug", "IN TR SETUP: COMPARING %s and %s ; lmost=%s, rmost=%s; ROOT IS %s" % (L, R, lmost, rmost, T),
-                        indent=depth)
-            self.log("debug", "IN TR SETUP: LOFFSUM = %s, ROFFSUM = %s" % (LOFFSUM, ROFFSUM),
-                     indent=depth)
-
-            # if T is a leaf
-            if not (T.left or T.right):
-                self.log("debug", "%s is a leaf" % T, indent=depth)
-                rmost = T
-                lmost = T
-
-                rmost.depth = depth
-                lmost.depth = depth
-                rmost.root_offset = 0
-                lmost.root_offset = 0
-                T.par_offset = 0
-                self.log("debug", "SETTING %s.par_offset = 0" % T, indent=depth)
-
-            else:
-                # "superimpose" the subtrees on one another, starting with separation of 0
-                CURSEP = MINSEP
-                ROOTSEP = MINSEP
-                LOFFSUM = 0
-                ROFFSUM = 0
-
-                # now consider each level until
-                # one subtree is exhausted,
-                # pushing apart when necessary
-                while L and R:
-                    self.log("debug", "\n" + ("\t" * depth) + "IN WHILE: L = %s; R = %s; CURSEP = %s" % (L, R, CURSEP),
-                             indent=depth)
-
-                    if CURSEP < MINSEP:
-                        # push apart
-                        push = MINSEP - CURSEP
-                        self.log("debug", "--- PUSHING APART BY %s" % push,
-                                 indent=depth)
-                        ROOTSEP += push
-                        CURSEP = MINSEP
-
-                    # advance L and R along respective contours
-                    if L.right:
-                        LOFFSUM += L.par_offset
-                        self.log("debug", "IN WHILE: LOFFSUM += %s; NOW = %s" % (L.par_offset, LOFFSUM),
-                                 indent=depth)
-
-                        self.log("debug", "IN WHILE: CURSEP -= L.offset: %s" % L.par_offset,
-                                 indent=depth)
-                        CURSEP -= L.par_offset
-
-                        self.log("debug", "IN WHILE: L -> %s" % L.right,
-                                 indent=depth)
-                        L = L.right
-                    else:
-                        LOFFSUM -= L.par_offset
-                        self.log("debug", "IN WHILE: LOFFSUM -= %s; NOW = %s" % (L.par_offset, LOFFSUM),
-                                 indent=depth)
-
-                        self.log("debug", "IN WHILE: CURSEP += L.offset: %s" % L.par_offset,
-                                 indent=depth)
-                        CURSEP += L.par_offset
-                        self.log("debug", "IN WHILE: L -> %s" % L.left,
-                                 indent=depth)
-                        L = L.left
-
-                    if R.left:
-                        ROFFSUM -= R.par_offset
-                        self.log("debug", "IN WHILE: ROFFSUM += %s; NOW = %s" % (R.par_offset, ROFFSUM),
-                                 indent=depth)
-
-                        self.log("debug", "IN WHILE: CURSEP -= R.offset: %s" % R.par_offset,
-                                 indent=depth)
-                        CURSEP -= R.par_offset
-                        self.log("debug", "IN WHILE: R -> %s" % R.left,
-                                 indent=depth)
-                        R = R.left
-                    else:
-                        ROFFSUM += R.par_offset
-                        self.log("debug", "IN WHILE: ROFFSUM += %s; NOW = %s" % (R.par_offset, ROFFSUM),
-                                 indent=depth)
-
-                        self.log("debug", "IN WHILE: CURSEP += R.offset: %s" % R.par_offset,
-                                 indent=depth)
-                        CURSEP += R.par_offset
-                        self.log("debug", "IN WHILE: R -> %s" % R.right,
-                                 indent=depth)
-                        R = R.right
-
-                self.log("debug", "WHILE TERMINATED", indent=depth)
-
-                # set the offset in T and include it in
-                # accumulated offsets for L and R
-                T.par_offset = (ROOTSEP + 1) // 2
-                self.log("debug", "SETTING %s.par_offset = (ROOTSEP: %s + 1) // 2" % (T, ROOTSEP),
-                         indent=depth)
-                self.log("debug", "SETTING %s.par_offset = %s" % (T, T.par_offset),
-                         indent=depth)
-
-                self.log("debug", "CURRENT ROOTSEP = %s" % ROOTSEP, indent=depth)
-
-                LOFFSUM -= T.par_offset
-                ROFFSUM += T.par_offset
-                self.log("debug", "LOFFSUM -= %s; NOW = %s" % (T.par_offset, LOFFSUM), indent=depth)
-                self.log("debug", "ROFFSUM += %s; NOW = %s" % (T.par_offset, ROFFSUM), indent=depth)
-
-
-                self.log("debug", "UPDATING EXTREME DESCENDANTS", indent=depth)
-                # update extreme descendants information
-                if T.left is None or ((RL and LL) and RL.depth > LL.depth):
-                    lmost = RL
-                    lmost.root_offset += T.par_offset
-                    self.log("debug", "%s.root_offset += T.par: %s; NOW = %s" % (lmost, T.par_offset, lmost.root_offset),
-                             indent=depth)
-                else:
-                    lmost = LL
-
-                    # protecting from incrementing root offset twice for
-                    # leaf nodes (where rmost and lmost are the same node)
-                    if lmost is not rmost:
-                        lmost.root_offset -= T.par_offset
-                        self.log("debug", "%s.root_offset -= T.par: %s; NOW = %s" % (lmost, T.par_offset, lmost.root_offset),
-                                 indent=depth)
-
-                self.log("debug", "lmost = %s" % lmost, indent=depth)
-
-                # if LR and RR:
-                if T.right is None or ((LR and RR) and LR.depth > RR.depth):
-                    rmost = LR
-                    rmost.root_offset -= T.par_offset
-                    self.log("debug", "%s.root_offset -= T.par: %s; NOW = %s" % (rmost, T.par_offset, rmost.root_offset),
-                             indent=depth)
-                else:
-                    rmost = RR
-
-                    # protecting from incrementing root offset twice for
-                    # leaf nodes (where rmost and lmost are the same node)
-                    if lmost is not rmost:
-                        rmost.root_offset += T.par_offset
-                        self.log("debug", "%s.root_offset += T.par: %s; NOW = %s" % (rmost, T.par_offset, rmost.root_offset),
-                                 indent=depth)
-                self.log("debug", "rmost = %s" % rmost, indent=depth)
-
-
-                self.log("debug", "PRE-THREADING: LL = %s, RR = %s, T.par_offset = %s" % (LL, RR, T.par_offset)
-                         , indent=depth)
-                self.log("debug", "PRE-THREADING: L = %s, R = %s, LOFFSUM = %s, ROFFSUM = %s" % (L, R, LOFFSUM, ROFFSUM),
-                         indent=depth)
-                # if subtrees of T have different heights,
-                # check if threading necessary - at most 1 thread
-                # will be inserted
-                if L and L is not T.left:
-                    # create a thread
-                    RR.has_thread = True
-                    RR.par_offset = abs((RR.root_offset + T.par_offset) - LOFFSUM)
-                    self.log("debug", "RR.par_offset =  abs((RR.root_offset: %s + T.par_offset) - LOFFSUM)"
-                             % RR.root_offset
-                             ,indent=depth)
-                    self.log("debug", "SETTING %s.par_offset = %s" % (RR, RR.par_offset),
-                             indent=depth)
-                    self.log("debug", "THREADING (L) %s to %s" % (RR, L), indent=depth)
-                    if LOFFSUM - T.par_offset <= RR.root_offset:
-                        RR.left = L
-                    else:
-                        RR.right = L
-
-                elif R and R is not T.right:
-                    # create a thread
-                    LL.has_thread = True
-                    LL.par_offset = abs((LL.root_offset - T.par_offset) - ROFFSUM)
-                    self.log("debug", "LL.par_offset = abs((LL.root_offset: %s - T.par_offset) - ROFFSUM)"
-                             % LL.root_offset
-                             , indent=depth)
-                    self.log("debug", "SETTING %s.par_offset = %s" % (LL, LL.par_offset),
-                             indent=depth)
-
-                    self.log("debug", "THREADING (R) %s to %s" % (LL, R), indent=depth)
-                    if ROFFSUM + T.par_offset >= LL.root_offset:
-                        LL.right = R
-                    else:
-                        LL.left = R
-                self.log("debug", "DONE THREADING", indent=depth)
-
-    def petrify_tr(self):
-        """Wrapper function for petrify method in
-            Reingold-Tilford algorithm -- assigns
-            absolute coordinates after setup_tr has
-            determined relative placements"""
-        self._petrify_tr(self.root, 0)
-
-    def _petrify_tr(self, T, x):
-        """Determines absolute coordinates in
-            preorder traversal of the tree and
-            removes all 'threads' created from setup"""
-
-        if T:
-            self.log("debug", "IN PETRIFY: T = %s, offset = %s" % (T, T.par_offset))
-            T.x = x
-            if T.has_thread:
-                T.has_thread = False
-                T.right = None
-                T.left = None
-            self._petrify_tr(T.left, x - T.par_offset)
-            self._petrify_tr(T.right, x + T.par_offset)
-
-    def render(self):
-        # # Reingold-Tilford algorithm
-
-        self.setup_tr()
-        self.petrify_tr()
-
-        # determine max/min x/y
-        self.max_x = self.max_y = self.min_x = self.min_y = 0
-        for node in self.root:
-            self.max_x = max(node.x, self.max_x)
-            self.max_y = max(node.y, self.max_y)
-            self.min_x = min(node.x, self.min_x)
-            self.min_y = min(node.y, self.min_y)
-
-        # temporary fix to place everything on screen
-        for node in self.root:
-            node.x += abs(self.min_x)
-
-        # print("x: %i, %i; y: %i, %i" % (self.min_x, self.max_x, self.min_y, self.max_y))
+        return RenderTree
 
 
 class BST(Tree):
     """
-    Binary search tree class. Keeps track of size,
-    height of tree (max_depth), and maintains a reference
+    Binary search tree class. Keeps track of
+    height of tree (max_depth) and maintains a reference
     to root TreeNode
-    :param root -- root of tree
-    :param minsep -- used for minimum separation in Reingold-Tilford algorithm
     """
+    def __init__(self, prebuild_size=0, root=None, name=None):
+        super().__init__(root, name)
+
+        if prebuild_size:
+            prebuild_size = int(prebuild_size)
+            numbers = list(range(prebuild_size))
+            random.shuffle(numbers)
+            for n in numbers:
+                self.insert(n)
+
     def __repr__(self):
         return "BST with root %s" % self.root
-
-    def __iter__(self):
-        return iter(self.root)
-
-    def set_name(self, name):
-        self.name = name
-
-    def preorder(self):
-        """Wrapper for TreeNode preorder"""
-        return self.root.preorder()
-
-    def postorder(self):
-        """Wrapper for TreeNode postorder"""
-        return self.root.postorder()
-
-    def set_control(self, control):
-        """Sets reference for control object"""
-        self.control = control
-
-    def set_logger(self, logger):
-        self.logger = logger
-        self.clear_log()
-        self.log("info", "\n\n\t----- new run -----\n")
-
-        # excluding debug information
-        self.log("info", "setting level to info")
-        self.logger.setLevel(logging.INFO)
-
-    def clear_log(self):
-        with open('../logs/model_log.log', 'w') as _:
-            pass
-
-    def log(self, level_str, message, indent=0):
-        """
-        Wrapper function for logging -- data structure may be created
-        before the control object (and thus the logger) has been initialized
-        :param level_str: string specifying logging level
-        :param message: message to log
-        :return:
-        """
-
-        message = "\t" * indent * 1 + message
-        try:
-            if self.logger:
-                log_func = log.to_function(self.logger, level_str)
-                log_func(message)
-        except AttributeError:
-            pass
-            # print("no logger ; message was %s" % message)
 
     def get_command_factory(self):
         """
@@ -610,12 +328,6 @@ class BST(Tree):
         initialized with reference to 'receiver'
         """
         return BSTCommandFactory(self)
-
-    def get_render_class(self):
-        """
-        Returns appropriate render class for BST
-        """
-        return RenderTree
 
     def insert(self, el, change_color=False):
         """
@@ -625,13 +337,12 @@ class BST(Tree):
         """
         self.log("info", "calling wrapper insert func with root %s to insert %i" % (self.root, el))
         if self.root:
-            self.root = self._insert(self.root, el, 0, change_color)
+            self.root = self._insert(self.root, el, change_color)
         else:
             self.root = TreeNode(el)
 
-        self.size += 1
 
-    def _insert(self, cur_node, el, depth, change_color):
+    def _insert(self, cur_node, el, change_color):
         """
         Recursive insert function
         :param cur_node: current working node
@@ -640,7 +351,7 @@ class BST(Tree):
         :param change_color: shows traversal of tree for visual purposes
         """
 
-        self.log("debug", "inserting %i at depth %i" % (el, depth))
+        self.log("debug", "inserting %i; current node is %s" % (el, cur_node))
 
         # change color to show traversal of tree
         if change_color:
@@ -648,30 +359,23 @@ class BST(Tree):
             self.control.my_renders[self.name].display(do_render=False, do_sleep=True)
             cur_node.color = 'white'
 
-        # update depth
-        if depth > self.max_depth:
-            self.max_depth = depth
-
         if el <= cur_node.val:
             self.log("debug", "%i <= %i; going left" % (el, cur_node.val))
             if cur_node.left:
-                cur_node.left = self._insert(cur_node.left, el, depth+1, change_color)
+                cur_node.left = self._insert(cur_node.left, el, change_color)
             else:
-                self.log("debug", "new leaf (%s) inserted at depth %i" % (el, depth+1))
-                cur_node.left = TreeNode(el, depth=depth+1, parent=cur_node)
+                self.log("debug", "new leaf (%s)" % (el))
+                cur_node.left = TreeNode(el, parent=cur_node)
         else:
             self.log("debug", "%i > %i; going right" % (el, cur_node.val))
             if cur_node.right:
-                cur_node.right = self._insert(cur_node.right, el, depth+1, change_color)
+                cur_node.right = self._insert(cur_node.right, el, change_color)
             else:
-                self.log("debug", "new leaf (%s) inserted at depth %i" % (el, depth+1))
-                cur_node.right = TreeNode(el, depth=depth+1, parent=cur_node)
+                self.log("debug", "new leaf (%s)" % (el))
+                cur_node.right = TreeNode(el, parent=cur_node)
 
         # update size
         cur_node.inc_size()
-
-        # update extreme descendants
-        cur_node.update_extremes()
 
         return cur_node
 
@@ -684,15 +388,18 @@ class BST(Tree):
             if self.root.size == 1:
                 self.root = None
             else:
-                # self.root = self._remove_swap(self.root, el, change_color)
                 self.root = self._remove(self.root, el, change_color)
-                self.root.update_size()
-                self.root.update_extremes()
 
         else:
             raise Exception("Can't remove %s. Not present in tree" % el)
 
     def _remove(self, cur_node, el, change_color):
+        """Recursive remove method. Three possible cases:
+            1. cur_node is leaf, simply remove it
+            2. cur_node has one child, "short circuit" method
+            3. cur_node has two children. Find predecessor of cur_node,
+               swap with cur_node and then delete cur_node from its new position"""
+
         if cur_node is None:
             return cur_node
 
@@ -708,9 +415,11 @@ class BST(Tree):
             elif cur_node.right is None:
                 return cur_node.left
             else:
+                # swap current node with predecessor and
+                # then remove it from its new location
                 pred = cur_node.predecessor()
                 cur_node.val = pred.val
-                cur_node.left = self._remove(cur_node.left, pred.val, change_color=False)
+                cur_node.left = self._remove(cur_node.left, pred.val, change_color)
 
         # recurse left or right
         elif el < cur_node.val:
@@ -719,13 +428,6 @@ class BST(Tree):
             cur_node.right = self._remove(cur_node.right, el, change_color)
 
         cur_node.update_size()
-
-        cur_node.update_child_depths()
-
-        node = cur_node
-        while node:
-            node.update_extremes()
-            node = node.parent
 
         return cur_node
 
@@ -868,15 +570,11 @@ class BST(Tree):
         node_b.parent = node_a.parent
         node_a.parent = node_b
 
-        # update depths from node_b
-        node_b.depth -= 1
-        node_b.update_child_depths()
-
-        # also need to update extreme_descendants for any ancestors
+        # also need to update sizes for any ancestors
         node = node_a
         while node:
             node.update_size()
-            node.update_extremes()
+        #     node.update_extremes()
             node = node.parent
 
     def rotate_right(self, node_a, node_b):
@@ -914,10 +612,6 @@ class BST(Tree):
             else:
                 node_a.parent.right = node_b
 
-        # move b and its left subtree up a level
-        node_b.depth -= 1
-        node_b.update_child_depths()
-
         # update parent references
         node_b.parent = node_a.parent
         node_a.parent = node_b
@@ -925,365 +619,47 @@ class BST(Tree):
         # walk up to root and update sizes and extreme descendants
         node = node_a
         while node:
-            node.update_extremes()
             node.update_size()
             node = node.parent
 
-    def setup_tr(self):
-        """
-        Wrapper function for Reingold-Tilford algorithm
-        """
-        self._setup_tr(self.root, 0, self.root.xleft, self.root.xright)
-
-    def _setup_tr(self, T, depth, rmost, lmost):
-        MINSEP = self.minsep
-        LL = LR = RL = RR = None
-
-        if T:
-            L = T.left
-            R = T.right
-            LL = L.xleft if L else None
-            LR = L.xright if L else None
-            RR = R.xright if R else None
-            RL = R.xleft if R else None
-
-        CURSEP = ROOTSEP = 0
-        LOFFSUM = ROFFSUM = 0
-
-        # base case when past leaves
-        if T is None:
-            if lmost:
-                lmost.depth = -1
-            if rmost:
-                rmost.depth = -1
-            return
-        else:
-            # T.update_extremes()
-
-            T.y = depth
-            # T.depth = depth
-            L = T.left
-            R = T.right
-
-            self._setup_tr(L, depth + 1, LR, LL)
-            self._setup_tr(R, depth + 1, RR, RL)
-
-            self.log("debug", "IN TR SETUP: COMPARING %s and %s ; lmost=%s, rmost=%s; ROOT IS %s" % (L, R, lmost, rmost, T),
-                        indent=depth)
-            self.log("debug", "IN TR SETUP: LOFFSUM = %s, ROFFSUM = %s" % (LOFFSUM, ROFFSUM),
-                     indent=depth)
-
-            # if T is a leaf
-            if not (T.left or T.right):
-                self.log("debug", "%s is a leaf" % T, indent=depth)
-                rmost = T
-                lmost = T
-
-                rmost.depth = depth
-                lmost.depth = depth
-                rmost.root_offset = 0
-                lmost.root_offset = 0
-                T.par_offset = 0
-                self.log("debug", "SETTING %s.par_offset = 0" % T, indent=depth)
-
-            else:
-                # "superimpose" the subtrees on one another, starting with separation of 0
-                CURSEP = MINSEP
-                ROOTSEP = MINSEP
-                LOFFSUM = 0
-                ROFFSUM = 0
-
-                # now consider each level until
-                # one subtree is exhausted,
-                # pushing apart when necessary
-                while L and R:
-                    self.log("debug", "\n" + ("\t" * depth) + "IN WHILE: L = %s; R = %s; CURSEP = %s" % (L, R, CURSEP),
-                             indent=depth)
-
-                    if CURSEP < MINSEP:
-                        # push apart
-                        push = MINSEP - CURSEP
-                        self.log("debug", "--- PUSHING APART BY %s" % push,
-                                 indent=depth)
-                        ROOTSEP += push
-                        CURSEP = MINSEP
-
-                    # advance L and R along respective contours
-                    if L.right:
-                        LOFFSUM += L.par_offset
-                        self.log("debug", "IN WHILE: LOFFSUM += %s; NOW = %s" % (L.par_offset, LOFFSUM),
-                                 indent=depth)
-
-                        self.log("debug", "IN WHILE: CURSEP -= L.offset: %s" % L.par_offset,
-                                 indent=depth)
-                        CURSEP -= L.par_offset
-
-                        self.log("debug", "IN WHILE: L -> %s" % L.right,
-                                 indent=depth)
-                        L = L.right
-                    else:
-                        LOFFSUM -= L.par_offset
-                        self.log("debug", "IN WHILE: LOFFSUM -= %s; NOW = %s" % (L.par_offset, LOFFSUM),
-                                 indent=depth)
-
-                        self.log("debug", "IN WHILE: CURSEP += L.offset: %s" % L.par_offset,
-                                 indent=depth)
-                        CURSEP += L.par_offset
-                        self.log("debug", "IN WHILE: L -> %s" % L.left,
-                                 indent=depth)
-                        L = L.left
-
-                    if R.left:
-                        ROFFSUM -= R.par_offset
-                        self.log("debug", "IN WHILE: ROFFSUM += %s; NOW = %s" % (R.par_offset, ROFFSUM),
-                                 indent=depth)
-
-                        self.log("debug", "IN WHILE: CURSEP -= R.offset: %s" % R.par_offset,
-                                 indent=depth)
-                        CURSEP -= R.par_offset
-                        self.log("debug", "IN WHILE: R -> %s" % R.left,
-                                 indent=depth)
-                        R = R.left
-                    else:
-                        ROFFSUM += R.par_offset
-                        self.log("debug", "IN WHILE: ROFFSUM += %s; NOW = %s" % (R.par_offset, ROFFSUM),
-                                 indent=depth)
-
-                        self.log("debug", "IN WHILE: CURSEP += R.offset: %s" % R.par_offset,
-                                 indent=depth)
-                        CURSEP += R.par_offset
-                        self.log("debug", "IN WHILE: R -> %s" % R.right,
-                                 indent=depth)
-                        R = R.right
-
-                self.log("debug", "WHILE TERMINATED", indent=depth)
-
-                # set the offset in T and include it in
-                # accumulated offsets for L and R
-                T.par_offset = (ROOTSEP + 1) // 2
-                self.log("debug", "SETTING %s.par_offset = (ROOTSEP: %s + 1) // 2" % (T, ROOTSEP),
-                         indent=depth)
-                self.log("debug", "SETTING %s.par_offset = %s" % (T, T.par_offset),
-                         indent=depth)
-
-                self.log("debug", "CURRENT ROOTSEP = %s" % ROOTSEP, indent=depth)
-
-                LOFFSUM -= T.par_offset
-                ROFFSUM += T.par_offset
-                self.log("debug", "LOFFSUM -= %s; NOW = %s" % (T.par_offset, LOFFSUM), indent=depth)
-                self.log("debug", "ROFFSUM += %s; NOW = %s" % (T.par_offset, ROFFSUM), indent=depth)
+class HeapNode(TreeNode):
+    pass
 
 
-                self.log("debug", "UPDATING EXTREME DESCENDANTS", indent=depth)
-                # update extreme descendants information
-                if T.left is None or ((RL and LL) and RL.depth > LL.depth):
-                    lmost = RL
-                    lmost.root_offset += T.par_offset
-                    self.log("debug", "%s.root_offset += T.par: %s; NOW = %s" % (lmost, T.par_offset, lmost.root_offset),
-                             indent=depth)
-                else:
-                    lmost = LL
+class BinaryHeap(Tree):
 
-                    # protecting from incrementing root offset twice for
-                    # leaf nodes (where rmost and lmost are the same node)
-                    if lmost is not rmost:
-                        lmost.root_offset -= T.par_offset
-                        self.log("debug", "%s.root_offset -= T.par: %s; NOW = %s" % (lmost, T.par_offset, lmost.root_offset),
-                                 indent=depth)
+    def __init__(self, prebuild_size=0, root=None, name=None):
+        super().__init__(root, name)
+        self.heap_array = []
 
-                self.log("debug", "lmost = %s" % lmost, indent=depth)
+        self.root = root
+        self.max_depth = 0
 
-                # if LR and RR:
-                if T.right is None or ((LR and RR) and LR.depth > RR.depth):
-                    rmost = LR
-                    rmost.root_offset -= T.par_offset
-                    self.log("debug", "%s.root_offset -= T.par: %s; NOW = %s" % (rmost, T.par_offset, rmost.root_offset),
-                             indent=depth)
-                else:
-                    rmost = RR
+        # assign name for getting corresponding render object
+        self.name = name
 
-                    # protecting from incrementing root offset twice for
-                    # leaf nodes (where rmost and lmost are the same node)
-                    if lmost is not rmost:
-                        rmost.root_offset += T.par_offset
-                        self.log("debug", "%s.root_offset += T.par: %s; NOW = %s" % (rmost, T.par_offset, rmost.root_offset),
-                                 indent=depth)
-                self.log("debug", "rmost = %s" % rmost, indent=depth)
+        if prebuild_size:
+            prebuild_size = int(prebuild_size)
+            numbers = list(range(prebuild_size))
+            random.shuffle(numbers)
+            for n in numbers:
+                self.insert_key(n)
+    @property
+    def root(self):
+        return self.heap_array[0]
 
-
-                self.log("debug", "PRE-THREADING: LL = %s, RR = %s, T.par_offset = %s" % (LL, RR, T.par_offset)
-                         , indent=depth)
-                self.log("debug", "PRE-THREADING: L = %s, R = %s, LOFFSUM = %s, ROFFSUM = %s" % (L, R, LOFFSUM, ROFFSUM),
-                         indent=depth)
-                # if subtrees of T have different heights,
-                # check if threading necessary - at most 1 thread
-                # will be inserted
-                if L and L is not T.left:
-                    # create a thread
-                    RR.has_thread = True
-                    RR.par_offset = abs((RR.root_offset + T.par_offset) - LOFFSUM)
-                    self.log("debug", "RR.par_offset =  abs((RR.root_offset: %s + T.par_offset) - LOFFSUM)"
-                             % RR.root_offset
-                             ,indent=depth)
-                    self.log("debug", "SETTING %s.par_offset = %s" % (RR, RR.par_offset),
-                             indent=depth)
-                    self.log("debug", "THREADING (L) %s to %s" % (RR, L), indent=depth)
-                    if LOFFSUM - T.par_offset <= RR.root_offset:
-                        RR.left = L
-                    else:
-                        RR.right = L
-
-                elif R and R is not T.right:
-                    # create a thread
-                    LL.has_thread = True
-                    LL.par_offset = abs((LL.root_offset - T.par_offset) - ROFFSUM)
-                    self.log("debug", "LL.par_offset = abs((LL.root_offset: %s - T.par_offset) - ROFFSUM)"
-                             % LL.root_offset
-                             , indent=depth)
-                    self.log("debug", "SETTING %s.par_offset = %s" % (LL, LL.par_offset),
-                             indent=depth)
-
-                    self.log("debug", "THREADING (R) %s to %s" % (LL, R), indent=depth)
-                    if ROFFSUM + T.par_offset >= LL.root_offset:
-                        LL.right = R
-                    else:
-                        LL.left = R
-                self.log("debug", "DONE THREADING", indent=depth)
-
-    def petrify_tr(self):
-        """Wrapper function for petrify method in
-            Reingold-Tilford algorithm -- assigns
-            absolute coordinates after setup_tr has
-            determined relative placements"""
-        self._petrify_tr(self.root, 0)
-
-    def _petrify_tr(self, T, x):
-        """Determines absolute coordinates in
-            preorder traversal of the tree and
-            removes all 'threads' created from setup"""
-
-        if T:
-            self.log("debug", "IN PETRIFY: T = %s, offset = %s" % (T, T.par_offset))
-            T.x = x
-            if T.has_thread:
-                T.has_thread = False
-                T.right = None
-                T.left = None
-            self._petrify_tr(T.left, x - T.par_offset)
-            self._petrify_tr(T.right, x + T.par_offset)
-
-    def setup_ws(self):
-        """
-        Wrapper function to initialize next_xs
-        and offset dictionaries and call
-        recursive function
-        """
-        self.next_xs = defaultdict(int)
-        self.offsets = defaultdict(int)
-
-        self._setup_ws(self.root, 0)
-
-    def _setup_ws(self, cur_node, depth):
-        # assign coordinates in bottom up fashion (postorder)
-        for node in cur_node.children():
-            self._setup_ws(node, depth+1)
-
-        cur_node.y = depth
-
-        if cur_node.is_leaf():
-            # if node is a leaf, simply assign
-            # it the next available x coord
-            place = self.next_xs[depth]
-            cur_node.x = place
-        elif len(cur_node.children()) == 1:
-            # if one child, place just left of child
-            child = cur_node.children()[0]
-            if child.val <= cur_node.val:
-                place = child.x + 1
-            else:
-                place = child.x - 1
-        else:
-            # if two children, center over children
-            xsum = cur_node.left.x + cur_node.right.x
-            place = xsum / 2
-
-        # determine offset
-        self.offsets[depth] = max(self.offsets[depth], self.next_xs[depth] - place)
-
-        if not cur_node.is_leaf():
-            cur_node.x = place + self.offsets[depth]
-
-        self.next_xs[depth] += 2
-        cur_node.shift = self.offsets[depth]
-
-    def add_shifts(self, cur_node, modsum=0):
-        """
-        Recursively add x shifts in an
-        inorder traversal to place nodes
-        in final position
-        """
-        cur_node.x = cur_node.x + modsum
-        modsum += cur_node.shift
-
-        for node in cur_node.children():
-            self.add_shifts(node, modsum)
-
-    def render(self):
-        # # Reingold-Tilford algorithm
-
-        self.setup_tr()
-        self.petrify_tr()
-
-        # determine max/min x/y
-        self.max_x = self.max_y = self.min_x = self.min_y = 0
-        for node in self.root:
-            self.max_x = max(node.x, self.max_x)
-            self.max_y = max(node.y, self.max_y)
-            self.min_x = min(node.x, self.min_x)
-            self.min_y = min(node.y, self.min_y)
-
-        # temporary fix to place everything on screen
-        for node in self.root:
-            node.x += abs(self.min_x)
-
-        # print("x: %i, %i; y: %i, %i" % (self.min_x, self.max_x, self.min_y, self.max_y))
-
-    def render_ws(self):
-        """
-        Wrapper function to initialize
-        'nexts' list and call recursive
-        function (Wetherell-Shannon algorithm)
-        """
-        # NAIVE WS ALGORITHM
-        self.next_xs = [0] * (self.max_depth +1 + 1)
-        self.max_x = 0
-        self.max_y = 0
-        self._render_ws(self.root, 0)
-
-
-        ## improved WS algorithm
-        # self.setup_ws()
-        # self.add_shifts(self.root)
-
-    def _render_ws(self, cur_node, depth):
-        """Naive WS algorithm - doesn't center children"""
-        x = self.next_xs[depth]
-        y = depth
-
-        cur_node.x = x
-        cur_node.y = y
-
-        self.max_x = max(x, self.max_x)
-
-        self.max_y = max(y, self.max_y)
-
-        self.next_xs[depth] += 1
-        for node in cur_node.children():
-            self._render_ws(node, depth+1)
+    @root.setter
+    def root(self, node):
+        self.heap_array[0] = node
 
 
 
-class BinaryHeap(object):
+    def __repr__(self):
+        return "Binary heap with root %s" % self.root
 
-    def __init__(self, prebuild_size=0, root=None, minsep=None, name=None):
+    def get_command_factory(self):
         pass
+
+    def insert_key(self, key):
+        pass
+
