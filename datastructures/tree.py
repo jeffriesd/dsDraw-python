@@ -135,6 +135,10 @@ class TreeNode(object):
         return self.xright
 
     def update_extremes(self):
+        """
+        Update extreme descendants picking from
+        only immediate children. Only 4 possible choices.
+        """
         if self.is_leaf():
             self.xleft = self
             self.xright = self
@@ -161,7 +165,6 @@ class TreeNode(object):
         cur_node.depth = depth
         self._update_child_depths(cur_node.left, depth+1)
         self._update_child_depths(cur_node.right, depth+1)
-
 
     def update_descendants_bottom_up(self):
         self._update_descendants_bottom_up(self)
