@@ -8,40 +8,41 @@ import random
 
 
 class TreeNode(object):
-    def __init__(self, val, depth=0, parent=None,
-                 left=None, right=None, xleft=None, xright=None):
+    def __init__(self, val, parent=None):
         """
         TreeNode class
         :param val: value stored in node -- currently only using ints
-        :param depth: depth from root of tree -- updated at insert time
         :param parent: reference to parent node
-        :param left: reference to left child
-        :param right: reference to right child
-        :param xleft: extreme left descendant (leftmost node in bottom layer of subtree)
-        :param xright: extreme right descendant
-        :param par_offset: horizontal offset from this node to parent
-        :param root_offset: horizontal offset from this node to root
+
+        left: reference to left child
+        right: reference to right child
+        xleft: extreme left descendant (leftmost node in bottom layer of subtree)
+        xright: extreme right descendant
+        par_offset: horizontal offset from this node to parent
+        root_offset: horizontal offset from this node to root
         """
         self.val = val
         self.parent = parent
-        self.left = left
-        self.right = right
+        self.left = None
+        self.right = None
 
         # a subtree consisting of a single node
         # is its own extreme descendant
-        self.xleft = xleft if xleft else self
-        self.xright = xright if xright else self
+        self.xleft = self
+        self.xright = self
 
-        # used in Reingold-Tilford algorithm
-        self.has_thread = False
+        self.size = 1
 
-        self.depth = depth
+        self.depth = -1
         self.x = -1
         self.y = -1
+
         self.shift = 0
-        self.size = 1
+
+        # used for Reingold-Tilford algorithm
         self.par_offset = 0
         self.root_offset = 0
+        self.has_thread = False
 
         self.color = "white"
 
@@ -93,7 +94,7 @@ class TreeNode(object):
 
     def children(self):
         """Returns list of children if any exist"""
-        return [n for n in [self.left, self.right] if n is not None]
+        return [n for n in [self.left_child(), self.right_child()] if n is not None]
 
     def left_child(self):
         return self.left
@@ -625,15 +626,37 @@ class BST(Tree):
             node.update_size()
             node = node.parent
 
+
 class HeapNode(TreeNode):
-    pass
+    def __init__(self, val, heap, index=-1, parent=None):
+        """
+        Heap node must be initialized with reference
+        to the heap class for getting left and right
+        children as well as parent references."""
+        super().__init__(val, parent=parent)
+
+        self.heap = heap
+
+    def left_child(self):
+        """Assuming index is correct"""
+        index = self.heap.heap_array.index(self)
+        return self.heap.heap_left(index)
+
+    def right_child(self):
+        index = self.heap.heap_array.index(self)
+        return self.heap.heap_right(index)
+
+    def is_leaf(self):
+        return len(self.children()) == 0
+
+
 
 
 class BinaryHeap(Tree):
 
     def __init__(self, prebuild_size=0, root=None, name=None):
-        super().__init__(root, name)
         self.heap_array = []
+        super().__init__(root, name)
 
         self.root = root
         self.max_depth = 0
@@ -649,20 +672,93 @@ class BinaryHeap(Tree):
                 self.insert_key(n)
     @property
     def root(self):
-        return self.heap_array[0]
+        try:
+            return self.heap_array[0]
+        except IndexError:
+            return None
 
     @root.setter
     def root(self, node):
-        self.heap_array[0] = node
-
-
+        try:
+            self.heap_array[0] = node
+        except IndexError:
+            self.heap_array.append(node)
 
     def __repr__(self):
         return "Binary heap with root %s" % self.root
 
+    def print_heap(self):
+        print(list(map(lambda node: node.val, self.heap_array)))
+
     def get_command_factory(self):
         pass
 
-    def insert_key(self, key):
-        pass
+    def find(self, key):
+        """O(n) traversal"""
+        for node in self.heap_array:
+            if node.val == key:
+                return node
+        return None
 
+    def parent_index(self, index):
+        return (index - 1) // 2 if index > 0 else 0
+
+    def heap_left(self, index):
+        try:
+            return self.heap_array[index * 2 + 1]
+        except IndexError:
+            return None
+
+    def heap_right(self, index):
+        try:
+            return self.heap_array[index * 2 + 2]
+        except IndexError:
+            return None
+
+    def insert_key(self, key):
+        """
+        Insert new node at the end of the array
+        and sift up until heap property satisfied
+        Runtime: O(logn)
+        """
+        if self.root is None:
+            self.root = HeapNode(key, self)
+            return
+
+        new_index = len(self.heap_array)
+        new_node = HeapNode(key, self)
+
+        self.heap_array.append(new_node)
+        self.sift_up(new_index)
+
+    def sift_up(self, index):
+        """
+        Swap with parent nodes until heap
+        property satisfied.
+        Runtime: O(logn)
+        """
+        child = self.heap_array[index]
+        p_index = self.parent_index(index)
+        p = self.heap_array[p_index]
+        while p.val > child.val:
+            # swap nodes
+            temp = p.val
+            self.heap_array[self.parent_index(index)].val = child.val
+            self.heap_array[index].val = temp
+
+            # move index up heap and
+            # update pointers
+            index = self.parent_index(index)
+            child = self.heap_array[index]
+            p = self.heap_array[self.parent_index(index)]
+
+if __name__ == '__main__':
+    my_nodes = [21, 25, 17, 9, 7, 19]
+                # 8, 20, 10, 11, 28, 26, 24, 5, 23]
+
+    h = BinaryHeap()
+    for n in my_nodes:
+        h.insert_key(n)
+    h.print_heap()
+
+    print(h.parent_index(0))
