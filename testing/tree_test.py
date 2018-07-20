@@ -1,10 +1,7 @@
 import unittest
-from util import build_tree
 import random
 from datastructures import tree
 from drawtools.render import RenderTree
-from screeninfo import get_monitors
-from tkinter import Tk
 
 
 class GenericBSTTest(unittest.TestCase):
@@ -145,7 +142,6 @@ class GenericBSTRotateTest(GenericBSTTest):
         # render to update depths and extreme descendants
         render_obj = RenderTree(self.tree, None)
         render_obj.render()
-
 
 if __name__ == '__main__':
     unittest.main()
