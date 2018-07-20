@@ -2,6 +2,7 @@ import unittest
 from util import build_tree
 import random
 from datastructures import tree
+from drawtools.render import RenderTree
 from screeninfo import get_monitors
 from tkinter import Tk
 
@@ -22,6 +23,10 @@ class GenericBSTTest(unittest.TestCase):
 
         for n in self.original_values:
             self.tree.insert(n)
+
+        # render to update depths and extreme descendants
+        render_obj = RenderTree(self.tree, None)
+        render_obj.render()
 
     def test_sizes(self):
         """Check sizes of each subtree (inorder traversal)"""
@@ -83,10 +88,8 @@ class GenericBSTTest(unittest.TestCase):
     def test_duplicate_coordinates(self):
         """
         Check if the tree has any duplicate coordinates
-        after calling render (Reingold-Tilford algorithm)
+        after creating render object to perform Reingold-Tilford algorithm
         """
-
-        self.tree.render()
 
         all_xy = [(node.x, node.y) for node in self.tree.root]
 
@@ -111,6 +114,10 @@ class GenericBSTRemoveTest(GenericBSTTest):
         for n in to_remove:
             self.tree.remove(n)
 
+        # render to update depths and extreme descendants
+        render_obj = RenderTree(self.tree, None)
+        render_obj.render()
+
 
 class GenericBSTRotateTest(GenericBSTTest):
 
@@ -130,10 +137,14 @@ class GenericBSTRotateTest(GenericBSTTest):
             l = n.left_child()
             if r:
                 self.tree.rotate_left(n, r)
-            elif l:
+            r = n.right_child()
+            l = n.left_child()
+            if not r and l:
                 self.tree.rotate_right(n, l)
 
-
+        # render to update depths and extreme descendants
+        render_obj = RenderTree(self.tree, None)
+        render_obj.render()
 
 
 if __name__ == '__main__':

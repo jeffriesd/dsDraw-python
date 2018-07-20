@@ -128,10 +128,10 @@ class RenderTree(object):
                                     text=node_text)
 
     def render(self):
-        # # Reingold-Tilford algorithm
+        # # Reingold-Tilford algorithm - O(n)
 
-        # do a O(n) pass to update depths and extreme descendants
-        self.tree.root.update_child_depths()
+        # do two O(n) passes to update depths and extreme descendants
+        self.tree.root.update_child_depths(0)
         self.tree.root.update_descendants_bottom_up()
 
         self.setup_tr()
