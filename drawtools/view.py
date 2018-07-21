@@ -133,6 +133,14 @@ class Console(Canvas):
         self.console_history.appendleft(new_line)
         self.redraw()
 
+    def update(self):
+        """
+        Overriding update so font size gets updated
+        on parent canvas resize
+        """
+        super().update()
+        self.redraw()
+
     def redraw(self):
         """Delete previous contents of canvas and redraw
             command history with the top of the stack at
@@ -195,6 +203,7 @@ class DrawCanvas(Canvas):
         self.width = nwidth
         self.height = nheight
 
+
     def place(self, *args, **kwargs):
         super().place(*args, **kwargs)
         self.relx = kwargs["relx"]
@@ -210,7 +219,7 @@ class CompositeCanvas(DrawCanvas):
     """
     Composite class to handle drawing multiple canvasses
     on the screen for multiple data structures.
-    All method calls are simply passed to all children.
+    All method calls are simply passed to all _children.
     """
 
     def __init__(self, parent, **kwargs):
@@ -218,11 +227,11 @@ class CompositeCanvas(DrawCanvas):
         self.parent = parent
         self.control = self.parent.control
         self.kwargs = kwargs
-        self.children = {}
 
     def update(self):
         for name, c in self.children.items():
             c.update()
+        super().update()
 
     def update_child(self, name):
         self.children[name].update()
@@ -245,7 +254,7 @@ class CompositeCanvas(DrawCanvas):
         :param new_canvas:
         :return:
         """
-        new_canvas = DrawCanvas(self, **self.kwargs)
+        new_canvas = DrawCanvas(self, name=name, **self.kwargs)
         focused_render = self.control.get_focused()
 
         if focused_render:
@@ -255,10 +264,13 @@ class CompositeCanvas(DrawCanvas):
             new_canvas.place(relx=0, rely=0,
                              relwidth=1, relheight=1)
 
-        self.children[name] = new_canvas
         return new_canvas
 
     def split_canvas(self, focused_canvas, new_canvas):
+        """
+        Split focused canvas along longer axis, place it in its
+        new relative position and place the new canvas beside it
+        """
         rel_x, rel_y, rel_width, rel_height = focused_canvas.get_geometry()
         true_height = focused_canvas.height
         true_width = focused_canvas.width
@@ -324,6 +336,9 @@ class DrawApp(tk.Frame):
         self.height = event.height
         self.control.display()
 
+        for name, child_canvas in self.children.items():
+            child_canvas.update()
+
     def init_components(self):
         """
         Uses Tkinter place layout manager to set
@@ -345,6 +360,8 @@ class DrawApp(tk.Frame):
         self.console_input.bind("<Up>", self.console.previous_command)
         self.console_input.bind("<Down>", self.console.next_command)
         self.console_input.bind("<Control-c>", self.console.clear_input)
+        # bind Ctrl z to undo action
+        self.console_input.bind("<Control-z>", self.control.undo_command)
 
         self.undo_button = Button(self, bg="#333", fg="white", text="Undo", command=self.control.undo_command)
         self.undo_button.place(relwidth=0.25, relheight=0.1, relx=0.05, rely=0.05)
@@ -361,18 +378,6 @@ class DrawApp(tk.Frame):
 
         self.test_button = Button(self, bg="#333", fg="white", text="Test", command=None)
         self.test_button.place(relwidth=0.12, relheight=0.1, relx=0.18, rely=0.875)
-
-    # def redraw(self):
-    #     # temporary code to reset tree each button press
-    #     new_tree = ctrl.build_tree(50, 0)
-    #     self.ds = new_tree
-    #     self.ds.set_logger(self.control.model_logger)
-    #
-    #     # bind data structure to control object
-    #     self.ds.set_control(self.control)
-    #     self.control.set_ds(self.ds)
-    #
-    #     self.control.display()
 
     def clear_canvas(self):
         self.canvas.delete("all")
