@@ -36,7 +36,7 @@ class CreateVariableCommand(object):
         self.receiver = receiver
         self.should_redraw = should_redraw
         self.var_name = var_name
-        self.nested_command = "".join([str(arg) + " " for arg in other_args])
+        self.nested_command = "".join([str(arg) + " " for arg in other_args]).strip()
 
     def execute(self):
         """
@@ -110,7 +110,7 @@ class CreateDataStructureCommand(object):
         return "CREATED NEW %s" % self.model_name
 
 
-class AddToViewCommand(object):
+class ShowRenderCommand(object):
     def __init__(self, receiver, model_name, should_redraw=True):
         self.receiver = receiver
         self.model_name = model_name
@@ -120,7 +120,41 @@ class AddToViewCommand(object):
         self.receiver.add_model_to_view(self.model_name)
 
     def undo(self):
-        pass
+        close_cmd = CloseRenderCommand(self.receiver, self.model_name, self.should_redraw)
+        close_cmd.execute()
 
     def __repr__(self):
         return "ADDED %s TO VIEW" % self.model_name
+
+
+class CloseRenderCommand(object):
+    def __init__(self, receiver, model_name, should_redraw=True):
+        """
+        Removes key from control.my_renders dict and destroys
+        canvas object from view.canvas.children
+        """
+        self.receiver = receiver
+        self.model_name = model_name
+        self.should_redraw = should_redraw
+
+    def execute(self):
+        self.receiver.my_renders.pop(self.model_name)
+        self.receiver.view.canvas.get_child(self.model_name).destroy()
+
+        renders = list(self.receiver.my_renders.keys())
+
+        # close and reopen the rest
+        for name in renders:
+            self.receiver.my_renders.pop(name)
+            self.receiver.view.canvas.get_child(name).destroy()
+
+        for name in renders:
+            self.receiver.add_model_to_view(name)
+            # update canvas so splits happen correctly
+            self.receiver.view.canvas.update()
+
+    def undo(self):
+        self.receiver.add_model_to_view(self.model_name)
+
+    def __repr__(self):
+        return "REMOVED %s FROM VIEW" % self.model_name
