@@ -2,7 +2,7 @@ from datastructures import graph
 from collections import defaultdict
 from util import logging_util as log
 import logging
-from command.command_factory import BSTCommandFactory
+from command.command_factory import BSTCommandFactory, BinaryHeapCommandFactory
 from drawtools.render import RenderTree
 import random
 
@@ -49,9 +49,6 @@ class TreeNode(object):
     def __repr__(self):
         return "Node(%s)" % self.val
 
-    def __eq__(self, other):
-        return self.val == other.val
-
     def __lt__(self, other):
         return self.val < other.val
 
@@ -93,7 +90,7 @@ class TreeNode(object):
         yield self
 
     def children(self):
-        """Returns list of children if any exist"""
+        """Returns list of _children if any exist"""
         return [n for n in [self.left_child(), self.right_child()] if n is not None]
 
     def left_child(self):
@@ -138,7 +135,7 @@ class TreeNode(object):
     def update_extremes(self):
         """
         Update extreme descendants picking from
-        only immediate children. Only 4 possible choices.
+        only immediate _children. Only 4 possible choices.
         """
         if self.is_leaf():
             self.xleft = self
@@ -153,8 +150,10 @@ class TreeNode(object):
 
         deepest = list(filter(lambda n: n.depth == max_d, child_extremes))
 
-        self.xleft = min(deepest, key=lambda n: n.val)
-        self.xright = max(deepest, key=lambda n: n.val)
+        # self.xleft = min(deepest, key=lambda n: n.val)
+        # self.xright = max(deepest, key=lambda n: n.val)
+        self.xleft = deepest[0]
+        self.xright = deepest[-1]
 
     def update_child_depths(self, depth=0):
         """"Recursively update depths in O(n) traversal of subtree"""
@@ -164,8 +163,8 @@ class TreeNode(object):
         if cur_node is None:
             return
         cur_node.depth = depth
-        self._update_child_depths(cur_node.left, depth+1)
-        self._update_child_depths(cur_node.right, depth+1)
+        self._update_child_depths(cur_node.left_child(), depth+1)
+        self._update_child_depths(cur_node.right_child(), depth+1)
 
     def update_descendants_bottom_up(self):
         self._update_descendants_bottom_up(self)
@@ -175,8 +174,8 @@ class TreeNode(object):
         if cur_node is None:
             return
 
-        self._update_descendants_bottom_up(cur_node.left)
-        self._update_descendants_bottom_up(cur_node.right)
+        self._update_descendants_bottom_up(cur_node.left_child())
+        self._update_descendants_bottom_up(cur_node.right_child())
 
         cur_node.update_extremes()
 
@@ -401,7 +400,7 @@ class BST(Tree):
         """Recursive remove method. Three possible cases:
             1. cur_node is leaf, simply remove it
             2. cur_node has one child, "short circuit" method
-            3. cur_node has two children. Find predecessor of cur_node,
+            3. cur_node has two _children. Find predecessor of cur_node,
                swap with cur_node and then delete cur_node from its new position"""
 
         if cur_node is None:
@@ -439,7 +438,7 @@ class BST(Tree):
         """Recursive remove method. Three possible cases:
             1. cur_node is leaf, simply remove it
             2. cur_node has one child, simply swap and remove
-            3. cur_node has two children. Find successor of cur_node,
+            3. cur_node has two _children. Find successor of cur_node,
                swap with cur_node and then delete cur_node from its new position"""
         if cur_node is None:
             return
@@ -632,13 +631,13 @@ class HeapNode(TreeNode):
         """
         Heap node must be initialized with reference
         to the heap class for getting left and right
-        children as well as parent references."""
+        _children as well as parent references."""
         super().__init__(val, parent=parent)
 
         self.heap = heap
 
     def left_child(self):
-        """Assuming index is correct"""
+        """Return left child of heap using index"""
         index = self.heap.heap_array.index(self)
         return self.heap.heap_left(index)
 
@@ -648,8 +647,6 @@ class HeapNode(TreeNode):
 
     def is_leaf(self):
         return len(self.children()) == 0
-
-
 
 
 class BinaryHeap(Tree):
@@ -668,7 +665,7 @@ class BinaryHeap(Tree):
             prebuild_size = int(prebuild_size)
             numbers = list(range(prebuild_size))
             random.shuffle(numbers)
-            for n in numbers:
+            for n in numbers[:prebuild_size//2]:
                 self.insert_key(n)
     @property
     def root(self):
@@ -691,7 +688,7 @@ class BinaryHeap(Tree):
         print(list(map(lambda node: node.val, self.heap_array)))
 
     def get_command_factory(self):
-        pass
+        return BinaryHeapCommandFactory(self)
 
     def find(self, key):
         """O(n) traversal"""
@@ -715,23 +712,24 @@ class BinaryHeap(Tree):
         except IndexError:
             return None
 
-    def insert_key(self, key):
+    def insert_key(self, key, change_color=False):
         """
         Insert new node at the end of the array
         and sift up until heap property satisfied
         Runtime: O(logn)
         """
+
         if self.root is None:
             self.root = HeapNode(key, self)
             return
 
         new_index = len(self.heap_array)
-        new_node = HeapNode(key, self)
+        new_node = HeapNode(key, self, parent=self.heap_array[self.parent_index(new_index)])
 
         self.heap_array.append(new_node)
-        self.sift_up(new_index)
+        self.sift_up(new_index, change_color)
 
-    def sift_up(self, index):
+    def sift_up(self, index, change_color):
         """
         Swap with parent nodes until heap
         property satisfied.
@@ -740,7 +738,14 @@ class BinaryHeap(Tree):
         child = self.heap_array[index]
         p_index = self.parent_index(index)
         p = self.heap_array[p_index]
+
         while p.val > child.val:
+
+            if change_color:
+                child.color = 'red'
+                self.control.my_renders[self.name].display(do_render=True, do_sleep=True)
+                child.color = 'white'
+
             # swap nodes
             temp = p.val
             self.heap_array[self.parent_index(index)].val = child.val
