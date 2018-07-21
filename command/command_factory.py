@@ -1,8 +1,9 @@
 from command.bst_command import BSTInsertCommand, BSTRemoveCommand, BSTFindCommand, \
                                 BSTRotateCommand
+from command.heap_command import BinaryHeapInsertKeyCommand
 from command.control_command import ClearConsoleCommand, CreateVariableCommand, \
                                     PrintVariableCommand, CreateDataStructureCommand, \
-                                    AddToViewCommand
+                                    ShowRenderCommand, CloseRenderCommand
 from util.exceptions import InvalidCommandError
 
 
@@ -20,12 +21,14 @@ class ControlCommandFactory(object):
             "assign": CreateVariableCommand,
             "print": PrintVariableCommand,
             "create": CreateDataStructureCommand,
-            "show": AddToViewCommand,
+            "show": ShowRenderCommand,
+            "close": CloseRenderCommand,
         }
 
     def create_command(self, type, *args, **kwargs):
         """Create a new command object with given arguments.
             Raises InvalidCommandError for malformed commands."""
+
         try:
             my_command = self.command_list[type]
             return my_command(self.receiver, *args, **kwargs)
@@ -68,4 +71,29 @@ class BSTCommandFactory(object):
         except ValueError:
             raise InvalidCommandError("Invalid arguments for '%s': '%s'" % (type, args))
 
+class BinaryHeapCommandFactory(object):
+    """Class to instantiate command objects for BinaryHeap.
+    Call get_command_factory() from a heap object
+    to get an instance of BinaryHeapCommandFactory"""
 
+    def __init__(self, receiver):
+        self.receiver = receiver
+
+        self.command_list = {
+            "insert": BinaryHeapInsertKeyCommand,
+        }
+
+    def create_command(self, type, *args, **kwargs):
+        """Create a new command object with given arguments (logical arguments
+                    from command prompt) and keyword args for meta-information
+                    like whether to redraw after executing or whether to show color for animation"""
+
+        # if command is invalid, return None. This will be propagated back to
+        # the view class and interpreted as a syntax error
+        try:
+            my_command = self.command_list[type]
+            return my_command(self.receiver, *args, **kwargs)
+        except KeyError:
+            raise InvalidCommandError("Invalid command for BinaryHeap: '%s'" % type)
+        except ValueError:
+            raise InvalidCommandError("Invalid arguments for '%s': '%s'" % (type, args))
