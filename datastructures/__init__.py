@@ -4,7 +4,8 @@ from datastructures import tree
 class ModelFactory(object):
     def __init__(self):
         self.model_types = {
-            "bst": tree.BST
+            "bst": tree.BST,
+            "heap": tree.BinaryHeap
         }
 
     def create_model(self, model_type_name, *other_args):
