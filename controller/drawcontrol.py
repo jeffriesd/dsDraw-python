@@ -4,7 +4,9 @@ from screeninfo import get_monitors
 from util import logging_util as log
 from tkinter import Tk
 import random
-from util.my_threads import TestThread
+from util.my_threads import CommandThread
+from threading import Thread
+from functools import partial
 from collections import deque
 from time import sleep
 from command.command_factory import ControlCommandFactory
@@ -88,7 +90,7 @@ class DrawControl:
         """
         for name, render_obj in self.my_renders.items():
             render_obj.focused = (name == render) or (render_obj == render)
-        self.display(do_sleep=False)
+        self.display(do_render=False)
 
     def get_focused(self):
         for name, render_obj in self.my_renders.items():
@@ -128,6 +130,14 @@ class DrawControl:
 
         return my_command
 
+    def raise_cmd_ex(self, ex, text):
+        """Workaround to raise exception from spawned thread"""
+        err_msg = "Error completing '%s': %s" % (text, ex)
+        self.logger.warning(err_msg)
+
+        self.view.console.add_line(err_msg, is_command=False)
+        raise ex
+
     def process_command(self, command_text):
         """
         Parse and instantiate command with parse_command()
@@ -148,7 +158,10 @@ class DrawControl:
             # catch logical errors,
             # e.g. trying to remove a node which isn't there
             try:
-                ret_value = self.perform_command(command_obj)
+                cmd = partial(self.perform_command, command_obj)
+                t = CommandThread(target=cmd, text=command_text,caller=self)
+                ret_value = t.start()
+                # ret_value = self.perform_command(command_obj)
 
                 # add it to command history for undoing
                 self.command_history.appendleft(command_obj)
@@ -159,6 +172,7 @@ class DrawControl:
                 self.logger.warning(err_msg)
 
                 self.view.console.add_line(err_msg, is_command=False)
+                raise(ex)
 
         except InvalidCommandError as err:
             # still show commands with bad syntax
@@ -195,24 +209,47 @@ class DrawControl:
 
         return command_value
 
-    def undo_command(self):
-        """Pass in a command which has been initialized with a receiver.
-            Perform command by calling command.execute() and redraw the canvas
-            if necessary"""
+    def process_undo(self, event=None):
+        """
+        Gets most recent command from command_history deque
+        and start a new thread to perform the undo/redraw
+        """
         try:
             last_command = self.command_history.popleft()
-            self.logger.info("Undoing %s on %s" % (last_command, last_command.receiver))
+            undo_text = "Undoing '%s' on %s" % (last_command, last_command.receiver)
+            self.logger.info(undo_text)
 
-            last_command.undo()
-            if last_command.should_redraw:
-                self.display()
+            # start new thread to perform undo
+            perform_undo = partial(self.perform_undo, last_command)
+            undo_thread = CommandThread(target=perform_undo, text=undo_text,caller=self)
+            undo_thread.start()
 
-            self.view.console.add_line("Undoing \"%s\"" % last_command)
+            self.view.console.add_line(undo_text, is_command=False)
 
         except IndexError as e:
             err_msg = "Error: Nothing left to undo"
             self.logger.error(err_msg)
             self.view.console.add_line(err_msg, is_command=False)
+
+    def perform_undo(self, last_command):
+        """
+        Encapsulates performance of undo command including redrawing
+        of specific canvas. Intended to be run from a separate thread,
+        created in process_undo
+        """
+        last_command.undo()
+        if last_command.should_redraw:
+            if last_command.receiver is self:
+                self.display(do_sleep=False)
+            else:
+                # show animations and only update
+                # relevant canvas
+                try:
+                    render_obj = self.my_renders[last_command.receiver.name]
+                    render_obj.display()
+                except KeyError:
+                    raise Exception("Error updating canvas for '%s'. No corresponding render object" % last_command.receiver)
+
 
     def add_to_sequence(self, command_obj):
         """
@@ -236,14 +273,6 @@ class DrawControl:
             :param do_sleep - flag whether to pause for animation purposes or not"""
         for _, render in self.my_renders.items():
             render.display(do_render, do_sleep)
-
-    def preprocess(self):
-        """Determines relative sizes/aspect ratios of data structures"""
-        pass
-
-    def draw_on_canvas(self):
-        """Performs specific logic to draw nodes/edges to canvas"""
-        pass
 
 
 def main():
