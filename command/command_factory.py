@@ -1,9 +1,12 @@
 from command.bst_command import BSTInsertCommand, BSTRemoveCommand, BSTFindCommand, \
                                 BSTRotateCommand
-from command.heap_command import BinaryHeapInsertKeyCommand
+from command.heap_command import BinaryHeapInsertKeyCommand, BinaryHeapRemoveMinCommand, \
+                                 BinaryHeapFindCommand, BinaryHeapDecreaseKeyCommand
 from command.control_command import ClearConsoleCommand, CreateVariableCommand, \
                                     PrintVariableCommand, CreateDataStructureCommand, \
                                     ShowRenderCommand, CloseRenderCommand
+from command.graph_command import GraphAddNodeCommand, GraphConnectCommand, GraphCutCommand, \
+                                    GraphRemoveNodeCommand
 from util.exceptions import InvalidCommandError
 
 
@@ -81,6 +84,9 @@ class BinaryHeapCommandFactory(object):
 
         self.command_list = {
             "insert": BinaryHeapInsertKeyCommand,
+            "find": BinaryHeapFindCommand,
+            "r-min": BinaryHeapRemoveMinCommand,
+            "dec": BinaryHeapDecreaseKeyCommand
         }
 
     def create_command(self, type, *args, **kwargs):
@@ -95,5 +101,27 @@ class BinaryHeapCommandFactory(object):
             return my_command(self.receiver, *args, **kwargs)
         except KeyError:
             raise InvalidCommandError("Invalid command for BinaryHeap: '%s'" % type)
+        except ValueError:
+            raise InvalidCommandError("Invalid arguments for '%s': '%s'" % (type, args))
+
+class GraphCommandFactory(object):
+    """
+    Class to instantiate command objects for Graph.
+    """
+    def __init__(self, receiver):
+        self.receiver = receiver
+        self.command_list = {
+            "add": GraphAddNodeCommand,
+            "con": GraphConnectCommand,
+            "cut": GraphCutCommand,
+            "remove": GraphRemoveNodeCommand,
+        }
+
+    def create_command(self, type, *args, **kwargs):
+        try:
+            my_command = self.command_list[type]
+            return my_command(self.receiver, *args, **kwargs)
+        except KeyError:
+            raise InvalidCommandError("Invalid command for Graph: '%s'" % type)
         except ValueError:
             raise InvalidCommandError("Invalid arguments for '%s': '%s'" % (type, args))

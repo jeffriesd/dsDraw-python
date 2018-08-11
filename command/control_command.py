@@ -1,6 +1,7 @@
 from tkinter import Canvas
 import datastructures
 
+
 class ClearConsoleCommand(object):
     def __init__(self, receiver, should_redraw=False):
         """
@@ -23,7 +24,7 @@ class ClearConsoleCommand(object):
 
 
 class CreateVariableCommand(object):
-    def __init__(self, receiver, var_name, *other_args, should_redraw=True):
+    def __init__(self, receiver, var_name, *other_args, should_redraw=False):
         """
         Creates a binding from a variable name to a
         reference returned by bst.find() or similar contained
@@ -89,7 +90,7 @@ class PrintVariableCommand(object):
 
 
 class CreateDataStructureCommand(object):
-    def __init__(self, receiver, model_type_name, *other_args, should_redraw=True):
+    def __init__(self, receiver, model_type_name, *other_args, should_redraw=False):
         """
         Returns a new empty model created by ModelFactory.
         e.g. 'create bst'

@@ -1,5 +1,6 @@
 from datastructures import tree
 
+
 class BSTInsertCommand(object):
 
     def __init__(self, receiver, value, should_redraw=True, change_color=True):
