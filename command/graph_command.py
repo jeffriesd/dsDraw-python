@@ -1,9 +1,12 @@
-class GraphAddNodeCommand(object):
+from command import ModelCommand
+
+class GraphAddNodeCommand(ModelCommand):
     """
     Add a new node and edge from an existing node
     e.g. "g.add 5 3"
     """
     def __init__(self, receiver, from_value, new_value, should_redraw=True, change_color=True):
+        super().__init__()      
         self.receiver = receiver
         self.from_value = from_value
         self.new_value = int(new_value)
@@ -20,12 +23,13 @@ class GraphAddNodeCommand(object):
     def undo(self):
         pass
 
-class GraphConnectCommand(object):
+class GraphConnectCommand(ModelCommand):
     """
     Create a new edge between two nodes
     e.g. "g.con 5 15"
     """
     def __init__(self, receiver, from_value, to_value, should_redraw=True, change_color=True):
+        super().__init__()     
         self.receiver = receiver
         self.from_value = from_value
         self.to_value = to_value
@@ -46,13 +50,14 @@ class GraphConnectCommand(object):
     def undo(self):
         pass
 
-class GraphCutCommand(object):
+class GraphCutCommand(ModelCommand):
     """
     Remove an edge between two nodes
     e.g. g.cut 5 3
     """
 
     def __init__(self, receiver, from_value, to_value, should_redraw=True, change_color=True):
+        super().__init__()      
         self.receiver = receiver
         self.from_value = int(from_value)
         self.to_value = int(to_value)
@@ -73,12 +78,13 @@ class GraphCutCommand(object):
     def undo(self):
         pass
 
-class GraphRemoveNodeCommand(object):
+class GraphRemoveNodeCommand(ModelCommand):
     """
     Remove a node and all its edges.
     """
 
     def __init__(self, receiver, remove_value, should_redraw=True, change_color=True):
+        super().__init__()      
         self.receiver = receiver
         self.remove_value = int(remove_value)
         self.should_redraw = should_redraw

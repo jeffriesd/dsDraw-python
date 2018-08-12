@@ -1,7 +1,7 @@
 from datastructures import tree
+from command import ModelCommand
 
-
-class BSTInsertCommand(object):
+class BSTInsertCommand(ModelCommand):
 
     def __init__(self, receiver, value, should_redraw=True, change_color=True):
         """
@@ -14,6 +14,7 @@ class BSTInsertCommand(object):
         :param change_color: flag to indicate whether nodes
                             should change color during execution
         """
+        super().__init__()
         self.receiver = receiver
         self.value = int(value)
         self.should_redraw = should_redraw
@@ -31,9 +32,10 @@ class BSTInsertCommand(object):
         return "INSERT %s" % self.value
 
 
-class BSTRemoveCommand(object):
+class BSTRemoveCommand(ModelCommand):
 
     def __init__(self, receiver, value, should_redraw=True, change_color=True):
+        super().__init__()
         self.receiver = receiver
         self.value = int(value)
         self.should_redraw = should_redraw
@@ -51,9 +53,10 @@ class BSTRemoveCommand(object):
         return "REMOVE %s" % self.value
 
 
-class BSTFindCommand(object):
+class BSTFindCommand(ModelCommand):
 
     def __init__(self, receiver, value, should_redraw=True, change_color=True):
+        super().__init__()         
         self.receiver = receiver
         self.value = int(value)
         self.should_redraw = should_redraw
@@ -70,7 +73,7 @@ class BSTFindCommand(object):
         return "FIND %s" % self.value
 
 
-class BSTRotateCommand(object):
+class BSTRotateCommand(ModelCommand):
     def __init__(self, receiever, direction, name_a, name_b, should_redraw=True):
         """
         Performs rotation based on direction given and names of nodes.
@@ -81,6 +84,7 @@ class BSTRotateCommand(object):
         :param name_b: variable name as stored in control.my_variables
         :param should_redraw: whether control should redraw after executing
         """
+        super().__init__()
         self.receiver = receiever
         self.direction = direction
         self.name_a = name_a

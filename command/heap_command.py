@@ -1,6 +1,9 @@
-class BinaryHeapInsertKeyCommand(object):
+from command import ModelCommand
+
+class BinaryHeapInsertKeyCommand(ModelCommand):
 
     def __init__(self, receiver, value, should_redraw=True, change_color=True):
+        super().__init__()
         self.receiver = receiver
         self.value = int(value)
         self.should_redraw = should_redraw
@@ -15,8 +18,9 @@ class BinaryHeapInsertKeyCommand(object):
     def __repr__(self):
         return "INSERT KEY %s" % self.value
 
-class BinaryHeapRemoveMinCommand(object):
+class BinaryHeapRemoveMinCommand(ModelCommand):
     def __init__(self, receiver, should_redraw=True, change_color=True):
+        super().__init__()
         self.receiver = receiver
         self.should_redraw = should_redraw
         self.change_color = change_color
@@ -27,8 +31,9 @@ class BinaryHeapRemoveMinCommand(object):
     def undo(self):
         pass
 
-class BinaryHeapFindCommand(object):
+class BinaryHeapFindCommand(ModelCommand):
     def __init__(self, receiver, value, should_redraw=True, change_color=True):
+        super().__init__()
         self.receiver = receiver
         self.value = int(value)
         self.should_redraw = should_redraw
@@ -40,8 +45,9 @@ class BinaryHeapFindCommand(object):
     def undo(self):
         pass
 
-class BinaryHeapDecreaseKeyCommand(object):
+class BinaryHeapDecreaseKeyCommand(ModelCommand):
     def __init__(self, receiver, node_name, new_value, should_redraw=True, change_color=True):
+        super().__init__()
         self.receiver = receiver
         self.node_name = node_name
         self.new_value = int(new_value)
