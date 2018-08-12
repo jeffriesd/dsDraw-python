@@ -1,14 +1,17 @@
 from tkinter import Canvas
 import datastructures
+from command.sequence import SequenceFactory
+from command import DSCommand
 
 
-class ClearConsoleCommand(object):
+class ClearConsoleCommand(DSCommand):
     def __init__(self, receiver, should_redraw=False):
         """
         Clears the console history visually and clears deque.
         Created by a ControlCommandFactory and passed to
         DrawControl for execution.
         """
+        super().__init__()
         self.receiver = receiver
         self.should_redraw = should_redraw
 
@@ -23,7 +26,7 @@ class ClearConsoleCommand(object):
         return "Clearing canvas."
 
 
-class CreateVariableCommand(object):
+class CreateVariableCommand(DSCommand):
     def __init__(self, receiver, var_name, *other_args, should_redraw=False):
         """
         Creates a binding from a variable name to a
@@ -34,6 +37,7 @@ class CreateVariableCommand(object):
         Binding is contained in control class inside
         my_variables
         """
+        super().__init__()
         self.receiver = receiver
         self.should_redraw = should_redraw
         self.var_name = var_name
@@ -58,7 +62,7 @@ class CreateVariableCommand(object):
         return "ASSIGN '%s' to reference returned by '%s'" % (self.var_name, self.nested_command)
 
 
-class PrintVariableCommand(object):
+class PrintVariableCommand(DSCommand):
     def __init__(self, receiver, var_name, should_redraw=False):
         """
         Print a value stored by variable name in control.my_variables
@@ -68,6 +72,7 @@ class PrintVariableCommand(object):
         :param should_redraw: used for all commands
         """
 
+        super().__init__()
         self.receiver = receiver
         self.var_name = var_name
         self.should_redraw = should_redraw
@@ -89,12 +94,13 @@ class PrintVariableCommand(object):
         pass
 
 
-class CreateDataStructureCommand(object):
+class CreateDataStructureCommand(DSCommand):
     def __init__(self, receiver, model_type_name, *other_args, should_redraw=False):
         """
         Returns a new empty model created by ModelFactory.
         e.g. 'create bst'
         """
+        super().__init__()
         self.receiver = receiver
         self.should_redraw = should_redraw
         self.model_name = model_type_name
@@ -111,8 +117,9 @@ class CreateDataStructureCommand(object):
         return "CREATED NEW %s" % self.model_name
 
 
-class ShowRenderCommand(object):
+class ShowRenderCommand(DSCommand):
     def __init__(self, receiver, model_name, should_redraw=True):
+        super().__init__()
         self.receiver = receiver
         self.model_name = model_name
         self.should_redraw = should_redraw
@@ -128,12 +135,13 @@ class ShowRenderCommand(object):
         return "ADDED %s TO VIEW" % self.model_name
 
 
-class CloseRenderCommand(object):
+class CloseRenderCommand(DSCommand):
     def __init__(self, receiver, model_name, should_redraw=True):
         """
         Removes key from control.my_renders dict and destroys
         canvas object from view.canvas.children
         """
+        super().__init__()
         self.receiver = receiver
         self.model_name = model_name
         self.should_redraw = should_redraw
@@ -159,3 +167,48 @@ class CloseRenderCommand(object):
 
     def __repr__(self):
         return "REMOVED %s FROM VIEW" % self.model_name
+
+
+class CreateSequenceCommand(DSCommand):
+    def __init__(self, receiver, sequence_name, *seq_args):
+        """
+        Create a new sequence and assign it a name
+        in control.my_variables.
+
+        :param receiver: control object
+        :param sequence_name: name of new sequence
+        """
+        super().__init__()
+        self.receiver = receiver
+        self.sequence_name = sequence_name
+        self.seq_args = seq_args
+
+    def execute(self):
+        factory = SequenceFactory()
+        sequence = factory.create_sequence(self.receiver, self.sequence_name, *self.seq_args)
+
+        # turn on sequence mode in console
+        self.receiver.view.console.sequence_mode(True)
+        import time
+
+        # wait until sequence building is done
+        while self.receiver.view.console.last_line() != "end":
+            time.sleep(.5)
+
+        # remove terminating 'end' from buffer
+        buffer = self.receiver.view.console.seq_buffer
+        buffer.pop()
+
+        # get entered lines (except for terminating 'end')
+        for line in buffer:
+            sequence.add_command(line)
+
+        # assign sequence to a variable name
+        self.receiver.my_variables[self.sequence_name] = sequence
+
+        # turn off sequence mode in console
+        self.receiver.view.console.sequence_mode(False)
+
+    def undo(self):
+        pass
+
