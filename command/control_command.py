@@ -36,24 +36,35 @@ class CreateVariableCommand(DSCommand):
 
         Binding is contained in control class inside
         my_variables
+
+        e.g. 'assign b create bst 25'
+             'assign r b:root:left'
         """
         super().__init__()
         self.receiver = receiver
         self.should_redraw = should_redraw
         self.var_name = var_name
-        self.nested_command = "".join([str(arg) + " " for arg in other_args]).strip()
+
+        # if other args are not strings, reference may have already
+        # been replaced
+        if type(other_args[0]) is not str:
+            self.reference = other_args[0]
+            self.nested_command = None
+        else:
+            self.nested_command = "".join([str(arg) + " " for arg in other_args]).strip()
 
     def execute(self):
         """
         Executes nested_command to get value that
         is being assigned to var_name.
         """
-        # don't call process_command so nested command
-        # doesn't get printed on an extra line
-        command_obj = self.receiver.parse_command(self.nested_command)
-        reference = self.receiver.perform_command(command_obj)
+        if self.nested_command:
+            # don't call process_command so nested command
+            # doesn't get printed on an extra line
+            command_obj = self.receiver.parse_command(self.nested_command)
+            self.reference = self.receiver.perform_command(command_obj)
 
-        self.receiver.my_variables[self.var_name] = reference
+        self.receiver.my_variables[self.var_name] = self.reference
 
     def undo(self):
         del self.receiver.my_variables[self.var_name]
@@ -87,6 +98,9 @@ class PrintVariableCommand(DSCommand):
             value = self.receiver.my_variables[self.var_name]
         except KeyError:
             raise KeyError("Variable name '%s' is not defined" % self.var_name)
+        except TypeError:
+            # in case of int argument
+            value = self.var_name
 
         self.receiver.view.console.add_line(value, is_command=False)
 

@@ -12,6 +12,8 @@ from time import sleep
 from command.command_factory import ControlCommandFactory
 from util.exceptions import InvalidCommandError
 from command.sequence import CommandSequence
+from command import ModelCommand
+from controller.environment import VariableEnvironment
 
 
 class DrawControl:
@@ -43,11 +45,8 @@ class DrawControl:
         # use stack to keep track of command history
         self.command_history = deque()
 
-        # command sequence object initialized with reference to control class
-        self.command_sequence = CommandSequence(self)
-
         # use dictionary to store user-defined variables
-        self.my_variables = {}
+        self.my_variables = VariableEnvironment(self)
 
         # use dictionary to store render objects for redrawing
         self.my_renders = {}
@@ -107,8 +106,9 @@ class DrawControl:
             the command type e.g. 'insert', 'delete', 'clear'
             and the rest being arguments to the respective command.
 
-            Assume receiver is model unless '/' present as first character,
-            in which case it's a command for the control object"""
+            Assume receiver is control unless '.' present in first word
+            in which case it's a command on a data structure.
+            """
 
         spl = command_text.split(" ")
 
@@ -124,6 +124,14 @@ class DrawControl:
         spl = command_text.split(" ")
         command_type = spl[0]
         args = spl[1:] if len(spl) > 1 else []
+
+        # parse args -- hack -- need to handle in another class
+        def parse_args(arg):
+            if ":" in arg:
+                return self.my_variables[arg]
+            return arg
+        args = list(map(parse_args, args))
+        print("command = %s; args = %s" % (command_text, args))
 
         # may raise Exception (InvalidCommandError) if syntax error in command text
         my_command = my_command_factory.create_command(command_type, *args)
@@ -152,9 +160,6 @@ class DrawControl:
         try:
             command_obj = self.parse_command(command_text)
 
-            # clear contents and add it to console
-            self.view.console.add_line(command_text)
-
             # catch logical errors,
             # e.g. trying to remove a node which isn't there
             try:
@@ -175,8 +180,6 @@ class DrawControl:
                 raise(ex)
 
         except InvalidCommandError as err:
-            # still show commands with bad syntax
-            self.view.console.add_line(command_text)
 
             err_msg = "Syntax error: %s" % err
             self.logger.warning(err_msg)
@@ -196,14 +199,17 @@ class DrawControl:
         command_value = command_obj.execute()
 
         if command_obj.should_redraw:
-            if command_obj.receiver is self:
+            if not isinstance(command_obj, ModelCommand):
                 self.display(do_sleep=False)
             else:
                 # show animations and only update
                 # relevant canvas
                 try:
                     render_obj = self.my_renders[command_obj.receiver.name]
-                    render_obj.display()
+
+                    ##### need to add do_render as parameter #####
+
+                    render_obj.display(do_render=command_obj.do_render)
                 except KeyError:
                     raise Exception("Error updating canvas for '%s'. No corresponding render object" % command_obj.receiver)
 

@@ -58,13 +58,20 @@ class BSTFindCommand(ModelCommand):
     def __init__(self, receiver, value, should_redraw=True, change_color=True):
         super().__init__()         
         self.receiver = receiver
-        self.value = int(value)
+        self.value = value
         self.should_redraw = should_redraw
         self.change_color = change_color
 
     def execute(self):
+        node_ref = self.get_reference(self.value)
 
-        return self.receiver.find(self.value, change_color=self.change_color)
+        # if self.value is a reference and not an int
+        try:
+            int_val = int(self.value)
+        except ValueError:
+            node_ref = self.receiver.find(node_ref.val, change_color=self.change_color)
+
+        return node_ref
 
     def undo(self):
         pass
@@ -90,15 +97,14 @@ class BSTRotateCommand(ModelCommand):
         self.name_a = name_a
         self.name_b = name_b
         self.should_redraw = should_redraw
+        self.change_color = False
 
     def execute(self):
 
         # get variable references from names (may not exist)
         try:
-            # node_a = self.receiver.control.my_variables[self.name_a]
-            # node_b = self.receiver.control.my_variables[self.name_b]
-            node_a = self.receiver.find(int(self.name_a), change_color=False)
-            node_b = self.receiver.find(int(self.name_b), change_color=False)
+            node_a = self.get_reference(self.name_a)
+            node_b = self.get_reference(self.name_b)
 
             if self.direction == "left":
                 self.receiver.rotate_left(node_a, node_b)
@@ -113,10 +119,8 @@ class BSTRotateCommand(ModelCommand):
     def undo(self):
         # get variable references from names (may not exist)
         try:
-            # node_a = self.receiver.control.my_variables[self.name_a]
-            # node_b = self.receiver.control.my_variables[self.name_b]
-            node_a = self.receiver.find(int(self.name_a), change_color=False)
-            node_b = self.receiver.find(int(self.name_b), change_color=False)
+            node_a = self.get_reference(self.name_a)
+            node_b = self.get_reference(self.name_b)
 
             if self.direction == "right":
                 self.receiver.rotate_left(node_b, node_a)

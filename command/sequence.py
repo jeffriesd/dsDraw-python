@@ -1,5 +1,6 @@
 from command import DSCommand
 from . import command_factory
+from command import ModelCommand
 
 
 class SequenceFactory(object):
@@ -54,9 +55,9 @@ class CommandSequence(DSCommand):
             command.execute()
 
             if command.should_redraw:
-                # if command receiver is control
-                if command.receiver is self.receiver:
-                    command.receiver.display()
+                # if command receiver is control or sequence
+                if not isinstance(command, ModelCommand):
+                    self.receiver.display()
                 else:
                     control = self.receiver
                     model_name = command.receiver.name
@@ -69,7 +70,7 @@ class CommandSequence(DSCommand):
 
 class ForSequence(CommandSequence):
 
-    def __init__(self, receiver, name, v_name, iter_string):
+    def __init__(self, receiver, name, v_name, iterable):
         """
         CommandSequence with for loop structure. Assigns variable
         name to values of some iterable. Command takes the form:
@@ -85,20 +86,11 @@ class ForSequence(CommandSequence):
         DSCommand.__init__(self)
         self.receiver = receiver
         self.name = name
+        self.sequence = []
         self.v_name = v_name
-        self.iter_string = iter_string
 
         # get reference to iterable structure
-        model_name, attr_name = iter_string.split(":")
-        try:
-            model = self.receiver.my_variables[model_name]
-        except KeyError:
-            raise Exception("Cannot resolve '%s': no model named '%s'" % (iter_string, model_name))
-        try:
-            self.iter = model.__getattribute__(attr_name)
-        except AttributeError:
-            raise Exception(
-                "Cannot resolve '%s': no attribute '%s' for model '%s'" % (iter_string, attr_name, model_name))
+        self.iterable = iterable
 
         # assign name in control object
         self.receiver.my_variables[name] = self
@@ -110,10 +102,22 @@ class ForSequence(CommandSequence):
         iterated value to control.my_variables[self.v_name]
          """
         try:
-            for i in self.iter:
-                pass
-        except TypeError:
-            raise Exception("Error completing sequence: %s is not iterable" % self.iter_string)
+            # generate list before iteration in case contents
+            # change (e.g. adding nodes to graph while iterating through g:nodes)
+            iter = list(self.iterable)
+            for i in iter:
+                # assign i to variable name
+                self.receiver.my_variables[self.v_name] = i
+
+                # execute sequence of commands
+                super().execute()
+
+            # delete iterated variable reference
+            del self.receiver.my_variables[self.v_name]
+
+        except TypeError as e:
+            print(e)
+            raise Exception("Error completing sequence: %s is not iterable" % self.iterable)
 
 
 class WhileSequence(CommandSequence):
@@ -122,6 +126,7 @@ class WhileSequence(CommandSequence):
         DSCommand.__init__(self)
         self.receiver = receiver
         self.name = name
+        self.sequence = []
         self.condition = condition_args
 
 

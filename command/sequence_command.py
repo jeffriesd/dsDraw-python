@@ -12,6 +12,7 @@ class SequenceExecuteCommand(DSCommand):
         self.receiver = receiver
 
     def execute(self):
+        """Call execute on CommandSequence object"""
         self.receiver.execute()
 
     def undo(self):
