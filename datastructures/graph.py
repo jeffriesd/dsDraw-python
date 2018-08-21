@@ -4,6 +4,7 @@ import logging
 import util.logging_util as log
 from util.my_threads import LoopThread
 from command.command_factory import GraphCommandFactory
+from datastructures.basic import DataStructure
 from functools import partial
 from threading import Thread
 from math import tanh
@@ -25,7 +26,7 @@ class GraphNode(object):
     def __int__(self):
         return self.val
 
-class Graph(object):
+class Graph(DataStructure):
     def __init__(self, prebuild_size = 0, name=None):
         self.name = name
 
@@ -65,44 +66,6 @@ class Graph(object):
 
     def __iter__(self):
         return iter(self.nodes)
-
-    def set_name(self, name):
-        self.name = name
-
-    def set_control(self, control):
-        """Sets reference for control object"""
-        self.control = control
-
-    def set_logger(self, logger):
-        self.logger = logger
-        self.clear_log()
-        self.log("info", "\n\n\t----- new run -----\n")
-
-        # excluding debug information
-        self.log("info", "setting level to info")
-        self.logger.setLevel(logging.INFO)
-
-    def clear_log(self):
-        with open('../logs/model_log.log', 'w') as _:
-            pass
-
-    def log(self, level_str, message, indent=0):
-        """
-        Wrapper function for logging -- data structure may be created
-        before the control object (and thus the logger) has been initialized
-        :param level_str: string specifying logging level
-        :param message: message to log
-        :return:
-        """
-
-        message = "\t" * indent * 1 + message
-        try:
-            if self.logger:
-                log_func = log.to_function(self.logger, level_str)
-                log_func(message)
-        except AttributeError:
-            pass
-            # print("no logger ; message was %s" % message)
 
     def get_command_factory(self):
         return GraphCommandFactory(self)
@@ -153,9 +116,10 @@ class Graph(object):
             return
         except ValueError:
             pass
+
         raise Exception("Edge pair (%s, %s) not present" % (from_node, to_node))
 
-    def find(self, value):
+    def find(self, value, change_color=False):
         try:
             same_val = list(filter(lambda n: n.val == value, self.nodes))
             return same_val[0]

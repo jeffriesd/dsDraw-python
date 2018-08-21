@@ -1,11 +1,11 @@
-from datastructures import graph
 from collections import defaultdict
 from util import logging_util as log
 import logging
 from command.command_factory import BSTCommandFactory, BinaryHeapCommandFactory
 from drawtools.render import RenderTree
 import random
-
+from copy import copy
+from datastructures.basic import DataStructure
 
 class TreeNode(object):
     def __init__(self, val, parent=None):
@@ -238,7 +238,7 @@ class TreeNode(object):
         return self is self.parent.left
 
 
-class Tree(object):
+class Tree(DataStructure):
     def __init__(self, root=None, name=None):
         self.root = root
         self.max_depth = 0
@@ -263,40 +263,6 @@ class Tree(object):
         """Wrapper for TreeNode postorder"""
         return self.root.postorder()
 
-    def set_control(self, control):
-        """Sets reference for control object"""
-        self.control = control
-
-    def set_logger(self, logger):
-        self.logger = logger
-        self.clear_log()
-        self.log("info", "\n\n\t----- new run -----\n")
-
-        # excluding debug information
-        self.log("info", "setting level to info")
-        self.logger.setLevel(logging.INFO)
-
-    def clear_log(self):
-        with open('../logs/model_log.log', 'w') as _:
-            pass
-
-    def log(self, level_str, message, indent=0):
-        """
-        Wrapper function for logging -- data structure may be created
-        before the control object (and thus the logger) has been initialized
-        :param level_str: string specifying logging level
-        :param message: message to log
-        :return:
-        """
-
-        message = "\t" * indent * 1 + message
-        try:
-            if self.logger:
-                log_func = log.to_function(self.logger, level_str)
-                log_func(message)
-        except AttributeError:
-            pass
-            # print("no logger ; message was %s" % message)
 
 
     def get_render_class(self):
@@ -343,7 +309,6 @@ class BST(Tree):
             self.root = self._insert(self.root, el, change_color)
         else:
             self.root = TreeNode(el)
-
 
     def _insert(self, cur_node, el, change_color):
         """
@@ -690,15 +655,31 @@ class BinaryHeap(Tree):
     def get_command_factory(self):
         return BinaryHeapCommandFactory(self)
 
-    def find(self, key):
+    def find(self, key, change_color=False):
         """O(n) traversal"""
         for node in self.heap_array:
+            if change_color:
+                node.color = 'red'
+                self.control.my_renders[self.name].display(do_render=True, do_sleep=True)
+                node.color = 'white'
             if node.val == key:
                 return node
         return None
 
     def parent_index(self, index):
         return (index - 1) // 2 if index > 0 else 0
+
+    def left_index(self, index):
+        return 2 * index + 1
+
+    def right_index(self, index):
+        return 2 * index + 2
+
+    def heap_parent(self, index):
+        try:
+            return self.heap_array[(index - 1) // 2]
+        except IndexError:
+            return None
 
     def heap_left(self, index):
         try:
@@ -729,6 +710,88 @@ class BinaryHeap(Tree):
         self.heap_array.append(new_node)
         self.sift_up(new_index, change_color)
 
+    def decrease_key(self, node, new_value, change_color=False):
+        """
+        Decrease key value and sift up/down as needed.
+        """
+        node.val = new_value
+        index = self.heap_array.index(node)
+        p = self.heap_parent(index)
+        l = self.heap_left(index)
+        r = self.heap_right(index)
+
+        # check heap property
+        if node.val < p.val:
+            self.sift_up(index, change_color=change_color)
+        elif l.val < node.val or r.val < node.val:
+            self.sift_down(index, change_color=change_color)
+
+    def remove_min(self, change_color=False):
+        """
+        Remove and return minimum element (root)
+        of the heap by swapping it with the final element
+        in the array and sifting that element down
+        """
+        # save node so it can be returned at end
+        min = copy(self.root)
+
+        if len(self.heap_array) == 1:
+            self.heap_array = []
+            return min
+
+        # swap min with final node,
+        # remove last element and sift down
+        last = self.heap_array[-1]
+        self.root = last
+        self.heap_array = self.heap_array[:-1]
+
+        self.sift_down(0, change_color=change_color)
+
+        return min
+
+    def sift_down(self, index, change_color):
+        """
+        Swap with child nodes until heap
+        property satisfied.
+        Runtime: O(logn)
+        """
+        p = self.heap_array[index]
+        l = self.heap_left(index)
+        r = self.heap_right(index)
+        if not r or l < r:
+            child = l
+            index = self.left_index(index)
+        else:
+            child = r
+            index = self.right_index(index)
+
+        while p.val > child.val:
+            if change_color:
+                child.color = 'red'
+                self.control.my_renders[self.name].display(do_render=True, do_sleep=True)
+                child.color = 'white'
+
+            # swap nodes
+            temp = p.val
+            self.heap_array[self.parent_index(index)].val = child.val
+            self.heap_array[index].val = temp
+
+            # move index down heap and
+            # update pointers
+            l = self.heap_left(index)
+            r = self.heap_right(index)
+            if not r or l < r:
+                index = self.left_index(index)
+            else:
+                index = self.right_index(index)
+
+            # stop index from going off end of list
+            if child.is_leaf():
+                break
+            child = self.heap_array[index]
+            # p = self.heap_array[self.parent_index(index)]
+            p = self.heap_parent(index)
+
     def sift_up(self, index, change_color):
         """
         Swap with parent nodes until heap
@@ -740,16 +803,15 @@ class BinaryHeap(Tree):
         p = self.heap_array[p_index]
 
         while p.val > child.val:
-
             if change_color:
                 child.color = 'red'
                 self.control.my_renders[self.name].display(do_render=True, do_sleep=True)
                 child.color = 'white'
 
             # swap nodes
-            temp = p.val
-            self.heap_array[self.parent_index(index)].val = child.val
-            self.heap_array[index].val = temp
+            temp = p
+            self.heap_array[self.parent_index(index)] = child
+            self.heap_array[index] = temp
 
             # move index up heap and
             # update pointers

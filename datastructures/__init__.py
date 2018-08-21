@@ -1,11 +1,11 @@
-from datastructures import tree
-
+from datastructures import tree, graph
 
 class ModelFactory(object):
     def __init__(self):
         self.model_types = {
             "bst": tree.BST,
-            "heap": tree.BinaryHeap
+            "heap": tree.BinaryHeap,
+            "graph": graph.Graph
         }
 
     def create_model(self, model_type_name, *other_args):
@@ -14,3 +14,6 @@ class ModelFactory(object):
             return model_class(*other_args)
         except KeyError as e:
             raise e
+
+
+
