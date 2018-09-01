@@ -44,7 +44,7 @@ class ControlCommandFactory(CommandFactory):
         self.command_list = {
             "clear": ClearConsoleCommand,
             "assign": CreateVariableCommand,
-            "print": PrintVariableCommand,
+            "_print": PrintVariableCommand,
             "create": CreateDataStructureCommand,
             "show": ShowRenderCommand,
             "close": CloseRenderCommand,
