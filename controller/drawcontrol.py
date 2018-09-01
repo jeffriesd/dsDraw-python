@@ -45,7 +45,7 @@ class DrawControl:
         self.command_history = deque()
 
         # use dictionary to store user-defined variables
-        self.my_variables = VariableEnvironment(self)
+        self.my_variables = self.view.console.python_shell.locals
 
         # use dictionary to store render objects for redrawing
         self.my_renders = {}
@@ -111,26 +111,11 @@ class DrawControl:
 
         spl = command_text.split(" ")
 
-        # handle special case for command on model
-        if "." in spl[0]:
-            model_name, command_text = command_text.split(".")
-            model = self.my_variables[model_name]
-            my_command_factory = model.get_command_factory()
-            self.give_focus(model_name)
-        else:
-            my_command_factory = ControlCommandFactory(self)
+        my_command_factory = ControlCommandFactory(self)
 
         spl = command_text.split(" ")
         command_type = spl[0]
         args = spl[1:] if len(spl) > 1 else []
-
-        # parse args -- hack -- need to handle in another class
-        def parse_args(arg):
-            if ":" in arg:
-                return self.my_variables[arg]
-            return arg
-        args = list(map(parse_args, args))
-        print("command = %s; args = %s" % (command_text, args))
 
         # may raise Exception (InvalidCommandError) if syntax error in command text
         my_command = my_command_factory.create_command(command_type, *args)
@@ -179,9 +164,13 @@ class DrawControl:
 
         except InvalidCommandError as err:
 
-            err_msg = "Syntax error: %s" % err
-            self.logger.warning(err_msg)
-            self.view.console.add_line(err_msg, is_command=False)
+            # attempt to run as python code
+            try:
+                self.view.console.python_shell.runcode(command_text)
+            except:
+                err_msg = "Syntax error: %s" % err
+                self.logger.warning(err_msg)
+                self.view.console.add_line(err_msg, is_command=False)
 
     def perform_command(self, command_obj):
         """
