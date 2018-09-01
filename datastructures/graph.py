@@ -7,7 +7,6 @@ from command.command_factory import GraphCommandFactory
 from datastructures.basic import DataStructure
 from functools import partial
 from threading import Thread
-from math import tanh
 
 class GraphNode(object):
     def __init__(self, value, x=0, y=0):
@@ -35,13 +34,13 @@ class Graph(DataStructure):
 
         if prebuild_size:
 
-            def build_tree(size):
-                for i in range(size):
-                    if i == 0:
-                        self.nodes.append(GraphNode(i))
-                    else:
-                        parent = self.nodes[i // 2]
-                        self.add_node(parent, i)
+            # def build_tree(size):
+            #     for i in range(size):
+            #         if i == 0:
+            #             self.nodes.append(GraphNode(i))
+            #         else:
+            #             parent = self.nodes[i // 2]
+            #             self.add_node(parent, i)
             # build_tree(int(prebuild_size))
             og = GraphNode(-11)
             self.nodes.append(og)
@@ -80,15 +79,19 @@ class Graph(DataStructure):
         :param value: value of new node
         :return: new GraphNode connected to from_node
         """
+        new_node = self.new_node(value)
+
+        self.create_edge(from_node, new_node)
+        return new_node
+
+    def new_node(self, value):
         n = len(self.nodes)
         x = random.randint(-n, n)
         y = random.randint(-n, n)
 
-        new_node = GraphNode(value, x=x, y=y)
-        self.nodes.append(new_node)
-
-        self.create_edge(from_node, new_node)
-        return new_node
+        new = GraphNode(value, x=x, y=y)
+        self.nodes.append(new)
+        return new
 
     def remove_node(self, node_to_remove):
         if node_to_remove in self.nodes:
@@ -158,9 +161,6 @@ class RenderGraph(object):
             return
 
         if do_render:
-            # rt = TestThread(target=self.render, sleep_time=self.tick)
-            # rt = Thread(target=self.render)
-            # rt.start()
             self.render()
 
         # determine node sizes
@@ -397,13 +397,12 @@ class RenderGraph(object):
 
         # # temperature constant determines how far nodes can
         # # move in each iteration
-        self.temp = .02
+        self.temp = .03
 
         # create a new thread to handle moving nodes with
         # simulated forces of attraction/repulsion
         simulation_thread = LoopThread(target=self.move_nodes, n_iter=iterations, sleep_time=self.tick)
         simulation_thread.start()
-
 
 
 

@@ -6,7 +6,7 @@ class TestThread(threading.Thread):
     """Simple thread class created with added
         stop/start functionality"""
 
-    def __init__(self, target=None, sleep_time=1):
+    def __init__(self, target, sleep_time=1):
         super().__init__()
         self.running = False
         self.target = target
@@ -20,4 +20,33 @@ class TestThread(threading.Thread):
 
     def stop(self):
         self.running = False
+
+class CommandThread(threading.Thread):
+
+    def __init__(self, target, text, caller):
+        super().__init__()
+        self.target = target
+        self.text = text
+        self.caller = caller
+
+    def run(self):
+        try:
+            self.target()
+        except Exception as e:
+            self.caller.raise_cmd_ex(e, self.text)
+
+class LoopThread(threading.Thread):
+
+    def __init__(self, target, n_iter, sleep_time):
+        super().__init__()
+        self.target = target
+        self.n_iter = n_iter
+        self.sleep_time = sleep_time
+
+    def run(self):
+        for _ in range(self.n_iter):
+            self.target()
+            sleep(self.sleep_time)
+
+
 

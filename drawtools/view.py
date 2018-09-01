@@ -50,6 +50,9 @@ class Console(Canvas):
         # store index for cycling through commands with arrow keys
         self.cycle_index = -1
 
+        self.seq_mode = False
+
+
     def on_resize(self, event):
         """
         Function to automatically update
@@ -133,6 +136,9 @@ class Console(Canvas):
         self.console_history.appendleft(new_line)
         self.redraw()
 
+    def last_line(self):
+        return self.command_history[-1]
+
     def update(self):
         """
         Overriding update so font size gets updated
@@ -164,6 +170,9 @@ class Console(Canvas):
                     # show separator for each new command
                     x = self.font.measure(" ")
 
+                    if self.seq_mode:
+                        x = self.font.measure("   ")
+
                     # only show >> for commands
                     if console_line.is_command:
                         line = ">> " + line
@@ -173,6 +182,10 @@ class Console(Canvas):
 
                 self.create_text(x, y, text=line, anchor='w', font=self.font)
                 y -= y_spacing
+
+    def sequence_mode(self, mode):
+        self.seq_mode = mode
+
 
 
 class DrawCanvas(Canvas):
@@ -361,9 +374,9 @@ class DrawApp(tk.Frame):
         self.console_input.bind("<Down>", self.console.next_command)
         self.console_input.bind("<Control-c>", self.console.clear_input)
         # bind Ctrl z to undo action
-        self.console_input.bind("<Control-z>", self.control.undo_command)
+        self.console_input.bind("<Control-z>", self.control.process_undo)
 
-        self.undo_button = Button(self, bg="#333", fg="white", text="Undo", command=self.control.undo_command)
+        self.undo_button = Button(self, bg="#333", fg="white", text="Undo", command=self.control.process_undo)
         self.undo_button.place(relwidth=0.25, relheight=0.1, relx=0.05, rely=0.05)
 
 
@@ -394,5 +407,6 @@ class DrawApp(tk.Frame):
         self.console.clear_input()
         # reset arrow key cycle
         self.console.reset_cycle()
+        self.console.add_line(command_text)
 
         self.control.process_command(command_text)

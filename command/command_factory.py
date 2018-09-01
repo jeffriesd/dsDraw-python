@@ -7,7 +7,7 @@ from command.control_command import ClearConsoleCommand, CreateVariableCommand, 
                                     ShowRenderCommand, CloseRenderCommand, \
                                     CreateSequenceCommand
 from command.graph_command import GraphAddNodeCommand, GraphConnectCommand, GraphCutCommand, \
-                                    GraphRemoveNodeCommand
+                                    GraphRemoveNodeCommand, GraphAddOrConnectCommand, GraphNewNodeCommand
 from command.sequence_command import SequenceExecuteCommand
 from util.exceptions import InvalidCommandError
 
@@ -100,6 +100,8 @@ class GraphCommandFactory(CommandFactory):
             "con": GraphConnectCommand,
             "cut": GraphCutCommand,
             "remove": GraphRemoveNodeCommand,
+            "new": GraphNewNodeCommand,
+            "conadd": GraphAddOrConnectCommand,
         }
 
 

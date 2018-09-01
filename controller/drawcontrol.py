@@ -5,7 +5,6 @@ from util import logging_util as log
 from tkinter import Tk
 import random
 from util.my_threads import CommandThread
-from threading import Thread
 from functools import partial
 from collections import deque
 from time import sleep
@@ -166,7 +165,6 @@ class DrawControl:
                 cmd = partial(self.perform_command, command_obj)
                 t = CommandThread(target=cmd, text=command_text,caller=self)
                 ret_value = t.start()
-                # ret_value = self.perform_command(command_obj)
 
                 # add it to command history for undoing
                 self.command_history.appendleft(command_obj)
