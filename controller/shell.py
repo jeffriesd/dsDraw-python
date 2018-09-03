@@ -1,4 +1,5 @@
 from code import InteractiveConsole
+from datastructures.basic import DataStructure
 from threading import Thread
 from contextlib import redirect_stdout, redirect_stderr
 import sys
@@ -31,12 +32,11 @@ class VariableEnvironment(dict):
         Update a data structure's state
         any time it gets accessed.
         """
-        # var_name may not be a data structure
+        # clone may not be implemented
         try:
-            self.variables[var_name].add_state_to_history()
-        except AttributeError:
-            # not a data structure
-            pass
+            reference = self.variables[var_name]
+            if isinstance(reference, DataStructure):
+                reference.add_state_to_history()
         except NotImplementedError:
             # clone not implemented,
             # cant update history
@@ -56,11 +56,19 @@ class VariableEnvironment(dict):
 
 class EmbeddedShell(InteractiveConsole):
 
-    def __init__(self, console, locals=None, filename=None):
-        super().__init__(locals, filename)
+    def __init__(self, console, locals=None):
+        """
+        Embedded python console for easy creation of lists,
+        handling of loops, and interacting with data structure objects.
+        :param console: tkinter Console object from view module
+        :param locals: dict of local variables
+        """
+        super().__init__(locals)
         self.locals = VariableEnvironment()
         self.console = console
         self.my_std_out = MyStdOut(self.console)
+
+        self.runcode("from datastructures.arrays import *")
 
     def runcode(self, code):
         # reset list of recently touched data structures
