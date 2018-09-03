@@ -270,14 +270,6 @@ class Tree(DataStructure):
         """
         return RenderTree
 
-    def clone(self):
-        clone = BST()
-
-        for node in self.preorder():
-            clone.insert(node.val)
-
-        return clone
-
 
 class BST(Tree):
     """
@@ -297,6 +289,12 @@ class BST(Tree):
 
     def __repr__(self):
         return "BST with root %s" % self.root
+
+    def clone(self):
+        clone = BST()
+        for node in self.preorder():
+            clone.insert(node.val)
+        return clone
 
     def get_command_factory(self):
         """
@@ -656,6 +654,13 @@ class BinaryHeap(Tree):
     def __repr__(self):
         return "Binary heap with root %s" % self.root
 
+    def clone(self):
+        clone = BinaryHeap()
+        for node in self.heap_array:
+            clone.insert_key(node.val)
+
+        return clone
+
     def print_heap(self):
         print(list(map(lambda node: node.val, self.heap_array)))
 
@@ -663,7 +668,7 @@ class BinaryHeap(Tree):
         return BinaryHeapCommandFactory(self)
 
     def find(self, key, change_color=False):
-        """O(n) traversal"""
+        """Linear search by node value"""
         for node in self.heap_array:
             if change_color:
                 node.color = 'red'
