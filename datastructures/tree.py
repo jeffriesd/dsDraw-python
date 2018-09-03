@@ -240,6 +240,7 @@ class TreeNode(object):
 
 class Tree(DataStructure):
     def __init__(self, root=None, name=None):
+        super().__init__()
         self.root = root
         self.max_depth = 0
 
@@ -263,13 +264,19 @@ class Tree(DataStructure):
         """Wrapper for TreeNode postorder"""
         return self.root.postorder()
 
-
-
     def get_render_class(self):
         """
         Returns appropriate render class for BST
         """
         return RenderTree
+
+    def clone(self):
+        clone = BST()
+
+        for node in self.preorder():
+            clone.insert(node.val)
+
+        return clone
 
 
 class BST(Tree):
@@ -829,3 +836,8 @@ if __name__ == '__main__':
     h.print_heap()
 
     print(h.parent_index(0))
+
+
+    t = BST(25)
+    print(t)
+
