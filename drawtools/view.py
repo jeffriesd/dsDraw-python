@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import Canvas, Button, Entry, font as tkfont
+from drawtools import default_font
 from controller import drawcontrol as ctrl
 from command.bst_command import BSTInsertCommand, BSTRemoveCommand
 from collections import deque
@@ -193,7 +194,7 @@ class DrawCanvas(Canvas):
     Main view to draw data structures.
     Extends from tk.Canvas and is self resizing
     with a binding to <Configure>. This is necessary
-    to resize the objects within the canvas (tree, graph, etc)
+    to resize the objects within the canvas (tree, array, etc)
     """
     def __init__(self, parent, **kwargs):
         Canvas.__init__(self, parent, **kwargs)
@@ -331,7 +332,7 @@ class DrawApp(tk.Frame):
         self.pack()
         self.bind("<Configure>", self.on_resize)
 
-        self.mono_font = tkfont.Font(family="Monospace", size=10, weight="normal")
+        self.mono_font = default_font()
         self.init_components()
 
     def set_logger(self, logger):
