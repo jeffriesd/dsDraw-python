@@ -77,7 +77,8 @@ class EmbeddedShell(InteractiveConsole):
                     exec(code, self.locals)
 
                 # print return value if any
-                if self.locals["TEMP_VAR"] and "print" not in code:
+                if self.locals["TEMP_VAR"] and "print" not in code \
+                        and "=" not in code:
                     print(self.locals["TEMP_VAR"])
 
                 # clean up namespace
