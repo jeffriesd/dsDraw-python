@@ -1,10 +1,35 @@
 from collections import defaultdict
-from util.my_threads import LoopThread
+from util.my_threads import GraphSimThread
 from time import sleep
 from drawtools import default_font
 import random
 
-class RenderTree(object):
+
+class RenderObject(object):
+    def __init__(self, model, canvas, name=None):
+        self.canvas = canvas
+        self.model = model
+        self.name = name
+
+        # keep track of tkinter objects created
+        # by the data structure so it can be redrawn
+        # without removing annotations
+        self.render_ids = []
+
+        self.tick = .15
+        self.focused = False
+
+    def clear_canvas(self):
+        """
+        Only delete items created by render object/data structure.
+        """
+        # for id in self.render_ids:
+        #     self.render_ids.remove(id)
+        #     self.canvas.delete(id)
+        self.canvas.delete("all")
+
+
+class RenderTree(RenderObject):
     """
     Wrapper class to handle rendering algorithm (coordinate placement),
     scaling the model to its canvas, drawing to the canvas, handling
@@ -13,9 +38,8 @@ class RenderTree(object):
     """
 
     def __init__(self, model, canvas, name=None):
-        self.model = self.tree = model
-        self.canvas = canvas
-        self.name = name
+        super().__init__(model, canvas, name)
+        self.tree = self.model
 
         # used for centering tree on canvas
         self.max_x = 0
@@ -26,10 +50,6 @@ class RenderTree(object):
         # minimum separation between nodes
         # on the same level
         self.minsep = 1
-
-        # time between animations
-        self.tick = .15
-        self.focused = False
 
     def display(self, do_render=True, do_sleep=False):
         """Renders data structure (preprocess),
@@ -59,9 +79,6 @@ class RenderTree(object):
             self.canvas.update()
             sleep(self.tick)
 
-    def clear_canvas(self):
-        self.canvas.delete("all")
-
     def preprocess(self):
         """Determines actual size of each node.
             Called after tree.render() because value
@@ -83,7 +100,8 @@ class RenderTree(object):
                :param circle: if True, draw nodes as circles
                """
         # show name in top left corner
-        self.canvas.create_text(5, 5, text=self.name, anchor="nw", font=default_font())
+        name = self.canvas.create_text(5, 5, text=self.name, anchor="nw", font=default_font())
+        #self.render_ids.append(name)
 
         # if circle set to True, then
         # pick smaller of width/height
@@ -109,7 +127,8 @@ class RenderTree(object):
                 # show color for bst property
                 color = "blue" if c.val <= node.val else "red"
                 color = "green" if c.val == node.val else color
-                self.canvas.create_line(*centers, fill=color, width=2)
+                edge = self.canvas.create_line(*centers, fill=color, width=2)
+                #self.render_ids.append(edge)
 
             # draw nodes at 50% size as to not block
             # drawing of edges
@@ -117,7 +136,8 @@ class RenderTree(object):
 
             # self.model.logger.debug("Drawing Node(%s) at %.2f, %.2f" % (node.val, x0_n, y0_n))
 
-            self.canvas.create_oval(x0_n, y0_n, x0_n + cell_w / 2, y0_n + cell_h / 2, fill=node.color)
+            oval = self.canvas.create_oval(x0_n, y0_n, x0_n + cell_w / 2, y0_n + cell_h / 2, fill=node.color)
+            #self.render_ids.append(oval)
             # node_text = ("%sCC:\n%i, %i\ns:%i, d:%i"
             #                               % (node, node.x, node.y,
             #                                  node.get_size(), node.depth))
@@ -126,8 +146,9 @@ class RenderTree(object):
             node_text = node.val
             # node_text = ""
 
-            self.canvas.create_text(x0 + cell_w / 2, y0 + cell_h / 2,
+            val_text = self.canvas.create_text(x0 + cell_w / 2, y0 + cell_h / 2,
                                     text=node_text, font=default_font())
+            #self.render_ids.append(val_text)
 
     def render(self):
         # # Reingold-Tilford algorithm - O(n)
@@ -485,11 +506,10 @@ class RenderTree(object):
             self._render_ws(node, depth + 1)
 
 
-class RenderGraph(object):
+class RenderGraph(RenderObject):
     def __init__(self, model, canvas, name=None):
-        self.model = self.graph = model
-        self.canvas = canvas
-        self.name = name
+        super().__init__(model, canvas, name)
+        self.graph = self.model
 
         # used for centering array on canvas
         self.max_x = 0
@@ -497,8 +517,10 @@ class RenderGraph(object):
         self.min_x = 0
         self.min_y = 0
 
-        self.tick = 0.02
-        self.focused = False
+        self.tick = 0.1
+
+        # flag to keep one simulation thread going at a time
+        self.simulating = False
 
     def display(self, do_render=True, do_sleep=False):
         """Renders data structure (preprocess),
@@ -525,11 +547,7 @@ class RenderGraph(object):
         self.draw_on_canvas()
 
         if do_sleep:
-            self.canvas.update()
             sleep(self.tick)
-
-    def clear_canvas(self):
-        self.canvas.delete("all")
 
     def preprocess(self):
         """Determines actual size of each node.
@@ -563,13 +581,11 @@ class RenderGraph(object):
 
     def draw_on_canvas(self, circle=False):
         """
-               Determines size of each cell to be drawn and
-               iterates through tree, drawing edges first, then
-               nodes in an inorder traversal.
-               :param circle: if True, draw nodes as circles
-               """
+        Draw graph to canvas, edges first so nodes cover them up.
+        """
         # show name in top left corner
-        self.canvas.create_text(5, 5, text=self.name, anchor="nw", font=default_font())
+        name = self.canvas.create_text(5, 5, text=self.name, anchor="nw", font=default_font())
+        #self.render_ids.append(name)
 
         # if circle set to True, then
         # pick smaller of width/height
@@ -591,32 +607,23 @@ class RenderGraph(object):
             centers = [pt + off for pt, off in zip(pts, center_offsets)]
 
             color = "black"
-            self.canvas.create_line(*centers, fill=color, width=2)
-
+            edge = self.canvas.create_line(*centers, fill=color, width=2)
+            #self.render_ids.append(edge)
         for node in self.graph.nodes:
             x0 = node.x * cell_w
             y0 = node.y * cell_h
-
-            # # draw nodes at 50% size as to not block
-            # # drawing of edges
-            # x0_n, y0_n = [x0 + cell_w / 4, y0 + cell_h / 4]
-            #
-            # # self.model.logger.debug("Drawing Node(%s) at %.2f, %.2f" % (node.val, x0_n, y0_n))
-            #
-            # self.canvas.create_oval(x0_n, y0_n, x0_n + cell_w / 2, y0_n + cell_h / 2, fill=node.color)
 
             # draw nodes at 50% size as to not block
             # drawing of edges
             x0_n, y0_n = [x0 + 4 * cell_w / 10, y0 + 4 * cell_h / 10]
 
-            # self.model.logger.debug("Drawing Node(%s) at %.2f, %.2f" % (node.val, x0_n, y0_n))
-
-            self.canvas.create_oval(x0_n, y0_n, x0_n + 2 * cell_w / 10, y0_n + 2 * cell_h / 10, fill=node.color)
+            node.tk_id = self.canvas.create_oval(x0_n, y0_n, x0_n + 2 * cell_w / 10, y0_n + 2 * cell_h / 10, fill=node.color)
+            #self.render_ids.append(node.tk_id)
 
             node_text = node.val
-
-            self.canvas.create_text(x0 + cell_w / 2, y0 + cell_h / 2,
+            val_text = self.canvas.create_text(x0 + cell_w / 2, y0 + cell_h / 2,
                                     text=node_text, font=default_font())
+            #self.render_ids.append(val_text)
 
     def move_nodes(self):
 
@@ -672,10 +679,9 @@ class RenderGraph(object):
             v.x *= scale_factor
             v.y *= scale_factor
 
-        self.preprocess()
-        self.clear_canvas()
-        self.draw_on_canvas()
-        self.canvas.update()
+        # self.preprocess()
+        # self.clear_canvas()
+        # self.draw_on_canvas()
 
         # cooling
         self.temp *= .9995
@@ -720,7 +726,7 @@ class RenderGraph(object):
 
         return a_x, a_y
 
-    def render(self, iterations=150):
+    def render(self, iterations=250):
         """
         Determine coordinates of nodes
         for placement on canvas
@@ -750,18 +756,17 @@ class RenderGraph(object):
 
         # create a new thread to handle moving nodes with
         # simulated forces of attraction/repulsion
-        simulation_thread = LoopThread(target=self.move_nodes, n_iter=iterations, sleep_time=self.tick)
-        simulation_thread.start()
+        if not self.simulating:
+            simulation_thread = GraphSimThread(n_iter=iterations, render=self)
+            simulation_thread.start()
 
 
-class RenderArray(object):
+class RenderArray(RenderObject):
     def __init__(self, model, canvas, name=None):
-        self.model = self.array = model
-        self.canvas = canvas
-        self.name = name
+        super().__init__(model, canvas, name)
+        self.array = self.model
 
         self.tick = 0.02
-        self.focused = False
 
     def display(self, do_render=True, do_sleep=False):
         """Renders data structure (preprocess),
@@ -790,9 +795,6 @@ class RenderArray(object):
         if do_sleep:
             self.canvas.update()
             sleep(self.tick)
-
-    def clear_canvas(self):
-        self.canvas.delete("all")
 
     def preprocess(self):
         """
@@ -824,7 +826,8 @@ class RenderArray(object):
         Draw array from left to right at center of canvas.
         """
         # show name in top left corner
-        self.canvas.create_text(5, 5, text=self.name, anchor="nw", font=default_font())
+        name = self.canvas.create_text(5, 5, text=self.name, anchor="nw", font=default_font())
+        #self.render_ids.append(name)
 
         # draw entire array
         if self.draw_all:
@@ -835,16 +838,19 @@ class RenderArray(object):
                 x_1 = x_0 + self.cell_w
                 y_1 = y_0 + self.cell_h
 
-                self.canvas.create_rectangle(x_0, y_0, x_1, y_1, fill=arr_node.color)
+                rect = self.canvas.create_rectangle(x_0, y_0, x_1, y_1, fill=arr_node.color)
+                #self.render_ids.append(rect)
 
                 # draw text for value
                 if not self.array.hide_values:
-                    self.canvas.create_text(x_0 + self.cell_w / 2, y_0 + self.cell_h / 2,
+                    val_text = self.canvas.create_text(x_0 + self.cell_w / 2, y_0 + self.cell_h / 2,
                                             text=arr_node.value, font=default_font())
+                    #self.render_ids.append(val_text)
 
                 # draw indices
-                self.canvas.create_text(x_0 + self.cell_w / 2, y_0 - self.cell_h / 2,
+                ind = self.canvas.create_text(x_0 + self.cell_w / 2, y_0 - self.cell_h / 2,
                                             text=index, font=default_font())
+                #self.render_ids.append(ind)
         else:
             # draw first 3 elements ... last 3 elements
 
@@ -856,29 +862,35 @@ class RenderArray(object):
                 x_1 = x_0 + self.cell_w
                 y_1 = y_0 + self.cell_h
 
-                self.canvas.create_rectangle(x_0, y_0, x_1, y_1, fill=arr_node.color)
+                rect = self.canvas.create_rectangle(x_0, y_0, x_1, y_1, fill=arr_node.color)
+                #self.render_ids.append(rect)
 
                 # draw text for value
                 if not self.array.hide_values:
-                    self.canvas.create_text(x_0 + self.cell_w / 2, y_0 + self.cell_h / 2,
+                    val_text = self.canvas.create_text(x_0 + self.cell_w / 2, y_0 + self.cell_h / 2,
                                             text=arr_node.value, font=default_font())
+                    #self.render_ids.append(val_text)
 
                 # draw indices
-                self.canvas.create_text(x_0 + self.cell_w / 2, y_0 - self.cell_h / 2,
+                ind = self.canvas.create_text(x_0 + self.cell_w / 2, y_0 - self.cell_h / 2,
                                         text=index, font=default_font())
+                #self.render_ids.append(ind)
 
             # draw ...
             truncated_x_0 = self.side_space + 3 * self.cell_w
             truncated_y_0 = (self.canvas.height - self.cell_h) / 2
             truncated_x_1 = truncated_x_0 + self.cell_w * 2
             truncated_y_1 = truncated_y_0 + self.cell_h
-            self.canvas.create_rectangle(truncated_x_0, truncated_y_0,
+            tr = self.canvas.create_rectangle(truncated_x_0, truncated_y_0,
                                          truncated_x_1, truncated_y_1, fill="white")
             # draw ... in array and for indices
-            self.canvas.create_text(truncated_x_0 + self.cell_w, truncated_y_0 + self.cell_h/2,
+            tr1 = self.canvas.create_text(truncated_x_0 + self.cell_w, truncated_y_0 + self.cell_h/2,
                                     text=" ... ", font=default_font())
-            self.canvas.create_text(truncated_x_0 + self.cell_w, truncated_y_0 - self.cell_h / 2,
+            tr2 = self.canvas.create_text(truncated_x_0 + self.cell_w, truncated_y_0 - self.cell_h / 2,
                                     text=" ... ", font=default_font())
+            #self.render_ids.append(tr)
+            #self.render_ids.append(tr1)
+            #self.render_ids.append(tr2)
 
             # draw last 3 elements
             for index, arr_node in enumerate(self.array._array[-3:]):
@@ -888,15 +900,17 @@ class RenderArray(object):
                 x_1 = x_0 + self.cell_w
                 y_1 = y_0 + self.cell_h
 
-                self.canvas.create_rectangle(x_0, y_0, x_1, y_1, fill=arr_node.color)
+                rect = self.canvas.create_rectangle(x_0, y_0, x_1, y_1, fill=arr_node.color)
+                #self.render_ids.append(rect)
 
                 # draw text for value
                 if not self.array.hide_values:
-                    self.canvas.create_text(x_0 + self.cell_w / 2, y_0 + self.cell_h / 2,
+                    val_text = self.canvas.create_text(x_0 + self.cell_w / 2, y_0 + self.cell_h / 2,
                                             text=arr_node.value, font=default_font())
+                    #self.render_ids.append(val_text)
 
                 shifted_index = index + len(self.array) - 3
                 # draw indices
-                self.canvas.create_text(x_0 + self.cell_w / 2, y_0 - self.cell_h / 2,
+                ind = self.canvas.create_text(x_0 + self.cell_w / 2, y_0 - self.cell_h / 2,
                                         text=shifted_index, font=default_font())
-
+                #self.render_ids.append(ind)
