@@ -164,6 +164,8 @@ class CloseRenderCommand(DSCommand):
         self.receiver.my_renders.pop(self.model_name)
         self.receiver.view.canvas.get_child(self.model_name).destroy()
 
+        # create list first so dictionary isnt mutated
+        # during loop
         renders = list(self.receiver.my_renders.keys())
 
         # close and reopen the rest
@@ -173,6 +175,7 @@ class CloseRenderCommand(DSCommand):
 
         for name in renders:
             self.receiver.add_model_to_view(name)
+
             # update canvas so splits happen correctly
             self.receiver.view.canvas.update()
 
