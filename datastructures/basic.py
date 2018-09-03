@@ -1,8 +1,14 @@
 import logging
 import util.logging_util as log
+from copy import copy
+from collections import deque
 
 
 class DataStructure(object):
+
+    def __init__(self):
+        self.state_history = deque(maxlen=10)
+
     def set_name(self, name):
         self.name = name
 
@@ -40,3 +46,11 @@ class DataStructure(object):
         except AttributeError:
             pass
             # print("no logger ; message was %s" % message)
+
+    def add_state_to_history(self):
+        current_state = self.clone()
+        self.state_history.appendleft(current_state)
+
+    def clone(self):
+        raise NotImplementedError("Clone not implemented for %s" % self)
+
