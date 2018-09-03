@@ -1,6 +1,5 @@
 from datastructures import tree
 from drawtools import view
-from screeninfo import get_monitors
 from util import logging_util as log
 from tkinter import Tk
 import random
@@ -10,9 +9,8 @@ from collections import deque
 from time import sleep
 from command.command_factory import ControlCommandFactory
 from util.exceptions import InvalidCommandError
-from command.sequence import CommandSequence
 from command import ModelCommand
-from controller.environment import VariableEnvironment
+from controller.shell import EmbeddedShell
 
 
 class DrawControl:
@@ -44,8 +42,11 @@ class DrawControl:
         # use stack to keep track of command history
         self.command_history = deque()
 
+        # embed python shell
+        self.python_shell = EmbeddedShell(console=self.view.console)
+
         # use dictionary to store user-defined variables
-        self.my_variables = self.view.console.python_shell.locals
+        self.my_variables = self.python_shell.locals
 
         # use dictionary to store render objects for redrawing
         self.my_renders = {}
@@ -54,9 +55,7 @@ class DrawControl:
         """
         Assume a model has already been instantiated and
         assigned a name. Raises exception if name
-        already assigned.
-        :param model:
-        :return:
+        already assigned to existing render object.
         """
         if model_name in self.my_renders:
             raise Exception("Model '%s' already assigned to a render object" % model_name)
@@ -91,6 +90,9 @@ class DrawControl:
         self.display(do_render=False)
 
     def get_focused(self):
+        """
+        Return focused render object.
+        """
         for name, render_obj in self.my_renders.items():
             if render_obj.focused:
                 return render_obj
@@ -101,15 +103,14 @@ class DrawControl:
             pass
 
     def parse_command(self, command_text):
-        """Parses a command with the first argument being
-            the command type e.g. 'insert', 'delete', 'clear'
-            and the rest being arguments to the respective command.
+        """
+        Parses a command with the first argument being
+        the command type e.g. 'insert', 'delete', 'clear'
+        and the rest being arguments to the respective command.
 
-            Assume receiver is control unless '.' present in first word
-            in which case it's a command on a data structure.
-            """
-
-        spl = command_text.split(" ")
+        May raise invalid command exception in which case it
+        will be executed as python code.
+        """
 
         my_command_factory = ControlCommandFactory(self)
 
@@ -123,7 +124,7 @@ class DrawControl:
         return my_command
 
     def raise_cmd_ex(self, ex, text):
-        """Workaround to raise exception from spawned thread"""
+        """Workaround to raise exception from separate CommandThreads."""
         err_msg = "Error completing '%s': %s" % (text, ex)
         self.logger.warning(err_msg)
 
@@ -136,6 +137,10 @@ class DrawControl:
         and execute it with perform_command(), checking for
         syntactical and logical errors, and updating
         the console for the user.
+
+        Currently executing dsDraw commands or python code
+        with outermost try/catch.
+
         :param command_text: command text passed from view
         :return: return value in the case of commands like bst.find()
         """
@@ -148,8 +153,9 @@ class DrawControl:
             # e.g. trying to remove a node which isn't there
             try:
                 cmd = partial(self.perform_command, command_obj)
-                t = CommandThread(target=cmd, text=command_text,caller=self)
+                t = CommandThread(target=cmd, text=command_text, caller=self)
                 ret_value = t.start()
+                # ret_value = cmd()
 
                 # add it to command history for undoing
                 self.command_history.appendleft(command_obj)
@@ -163,14 +169,29 @@ class DrawControl:
                 raise(ex)
 
         except InvalidCommandError as err:
-
             # attempt to run as python code
+
+            # keep track of which models get accessed
+            # for redrawing purposes.
+            recently_touched = []
+
             try:
-                self.view.console.python_shell.runcode(command_text)
-            except:
+                recently_touched = self.python_shell.runcode(command_text)
+
+            except SyntaxError:
                 err_msg = "Syntax error: %s" % err
                 self.logger.warning(err_msg)
                 self.view.console.add_line(err_msg, is_command=False)
+            finally:
+                # redraw recently touched data structures
+                for ds_name in recently_touched:
+                    try:
+                        self.my_renders[ds_name].display(do_render=True)
+                        print("rendering %s" % ds_name)
+                    except KeyError:
+                        pass
+                    except AttributeError:
+                        pass
 
     def perform_command(self, command_obj):
         """
@@ -244,21 +265,6 @@ class DrawControl:
                     raise Exception("Error updating canvas for '%s'. No corresponding render object" % last_command.receiver)
 
 
-    def add_to_sequence(self, command_obj):
-        """
-            ***To be replaced by command object with control as receiver
-        """
-        self.command_sequence.add_command(command_obj)
-
-    def do_full_sequence(self):
-        """
-            ***To be replaced by command object with control as receiver
-        """
-        self.command_sequence.execute_sequence()
-
-    def set_ds(self, new_ds):
-        self.model = new_ds
-
     def display(self, do_render=True, do_sleep=False):
         """Renders data structure (preprocess),
             clears canvas, and draws to canvas
@@ -271,11 +277,14 @@ class DrawControl:
 def main():
     # function from screeninfo library to
     # get screen dimensions
-    dim = get_monitors()[0]
-    width = dim.width
-    height = dim.height
+    # dim = get_monitors()[0]
+    # width = dim.width
+    # height = dim.height
 
     root = Tk()
+
+    width = root.winfo_screenwidth()
+    height = root.winfo_screenheight()
 
     d = DrawControl(root, width, height)
     d.view.mainloop()

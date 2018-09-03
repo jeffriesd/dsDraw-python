@@ -410,3 +410,6 @@ class DrawApp(tk.Frame):
         self.console.add_line(command_text)
 
         self.control.process_command(command_text)
+
+
+
