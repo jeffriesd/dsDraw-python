@@ -1,11 +1,33 @@
 import tkinter as tk
 from tkinter import Canvas, Button, Entry, font as tkfont
 from drawtools import default_font
+from drawtools.annotations import Annotator
 from controller import drawcontrol as ctrl
 from command.bst_command import BSTInsertCommand, BSTRemoveCommand
-from collections import deque
+from collections import deque, defaultdict
 from textwrap import wrap
+from functools import partial
 
+
+class AnnotationButton(Button):
+
+    def __init__(self, parent, **kwargs):
+        """
+        Special button to change annotation modes.
+        """
+        super().__init__(parent, **kwargs)
+
+        self.active = False
+
+        self.bind("<Button-1>", self.toggle)
+
+    def toggle(self, event):
+        self.active = not self.active
+
+        bg = "#ccc" if self.active else "#333"
+        fg = "#333" if self.active else "#ccc"
+
+        self.configure(bg=bg, fg=fg)
 
 class Console(Canvas):
     """
@@ -53,6 +75,15 @@ class Console(Canvas):
 
         self.seq_mode = False
 
+        # flag used to toggle visibility
+        self.hidden = False
+
+    def place(self, *args, **kwargs):
+        super().place(*args, **kwargs)
+        self.relx = kwargs["relx"]
+        self.rely = kwargs["rely"]
+        self.relwidth = kwargs["relwidth"]
+        self.relheight = kwargs["relheight"]
 
     def on_resize(self, event):
         """
@@ -154,7 +185,7 @@ class Console(Canvas):
             the bottom of the console"""
         self.delete("all")
 
-        y_spacing = self.font['size'] * 2
+        y_spacing = self.font.measure("_") * 3
         y = self.winfo_height() - y_spacing
 
         for console_line in self.console_history:
@@ -188,7 +219,6 @@ class Console(Canvas):
         self.seq_mode = mode
 
 
-
 class DrawCanvas(Canvas):
     """
     Main view to draw data structures.
@@ -198,9 +228,12 @@ class DrawCanvas(Canvas):
     """
     def __init__(self, parent, **kwargs):
         Canvas.__init__(self, parent, **kwargs)
+        self.parent = parent
         self.bind("<Configure>", self.on_resize)
         self.height = self.winfo_reqheight()
         self.width = self.winfo_reqwidth()
+
+        self.annotator = Annotator(self)
 
     def on_resize(self, event):
         """
@@ -217,7 +250,6 @@ class DrawCanvas(Canvas):
         self.width = nwidth
         self.height = nheight
 
-
     def place(self, *args, **kwargs):
         super().place(*args, **kwargs)
         self.relx = kwargs["relx"]
@@ -227,6 +259,12 @@ class DrawCanvas(Canvas):
 
     def get_geometry(self):
         return self.relx, self.rely, self.relwidth, self.relheight
+
+    def get_annotation_mode(self):
+        """
+        Ask parent for annotation mode (will terminate at CompositeCanvas)
+        """
+        return self.parent.get_annotation_mode()
 
 
 class CompositeCanvas(DrawCanvas):
@@ -252,11 +290,6 @@ class CompositeCanvas(DrawCanvas):
 
     def get_child(self, name):
         return self.children[name]
-
-    def get_focused_child(self):
-        for _, canvas in self.children.items():
-            if canvas.focused:
-                return canvas
 
     def new_child(self, name):
         """
@@ -306,6 +339,10 @@ class CompositeCanvas(DrawCanvas):
             new_canvas.place(relx=rel_x, rely=rel_y + _rel_height,
                              relwidth=rel_width, relheight=_rel_height)
 
+    def get_annotation_mode(self):
+        """Ask DrawApp for annotation mode"""
+        return self.parent.annotation_mode
+
 
 class DrawApp(tk.Frame):
     def __init__(self, control, *args, **kwargs):
@@ -331,6 +368,10 @@ class DrawApp(tk.Frame):
         self.master.geometry("%ix%i" % (self.width, self.height))
         self.pack()
         self.bind("<Configure>", self.on_resize)
+
+        # one annotation mode for entire application
+        self.annotation_mode = None
+        self.annotation_buttons = {}
 
         self.mono_font = default_font()
         self.init_components()
@@ -363,12 +404,12 @@ class DrawApp(tk.Frame):
         self.console_input = Entry(self, bg="white", borderwidth=0,
                                    highlightbackground="white", highlightcolor="white",
                                    font=self.mono_font)
-        self.console_input.place(relwidth=0.25, relheight=0.05, relx=0.05, rely=0.8)
+        self.console_input.place(relwidth=0.25, relheight=0.05, relx=0.05, rely=0.9)
         self.console_input.bind("<Return>", self.command_entered)
 
         # initialize Console with reference to input
         self.console = Console(self, self.console_input, bg="white")
-        self.console.place(relwidth=0.25, relheight=0.75, relx=0.05, rely=0.05)
+        self.console.place(relwidth=0.25, relheight=0.85, relx=0.05, rely=0.05)
 
         # bind up/down arrow keys to console action
         self.console_input.bind("<Up>", self.console.previous_command)
@@ -377,21 +418,26 @@ class DrawApp(tk.Frame):
         # bind Ctrl z to undo action
         self.console_input.bind("<Control-z>", self.control.process_undo)
 
-        self.undo_button = Button(self, bg="#333", fg="white", text="Undo", command=self.control.process_undo)
-        self.undo_button.place(relwidth=0.25, relheight=0.1, relx=0.05, rely=0.05)
-
-
         self.canvas = CompositeCanvas(self, highlightthickness=1, highlightbackground="black", bg="#ccc")
         # setting canvas to fill right side of screen -
         #   60% width, offset 20% left of center,
         #   so 40% total
         self.canvas.place(relwidth=0.6, relheight=0.9, relx=0.35, rely=0.05)
 
-        self.d_button = Button(self, bg="#333", fg="white", text="Draw", command=None)
-        self.d_button.place(relwidth=0.12, relheight=0.1, relx=0.05, rely=0.875)
+        # add annotation buttons
+        text_mode = partial(self.toggle_annotation_mode, "text")
+        self.text_annotation_button = AnnotationButton(self, text="text", bg="#333", fg="white", command=text_mode)
+        self.text_annotation_button.place(relwidth=0.04, relheight=0.04, relx=0.955, rely=0.055)
 
-        self.test_button = Button(self, bg="#333", fg="white", text="Test", command=None)
-        self.test_button.place(relwidth=0.12, relheight=0.1, relx=0.18, rely=0.875)
+        self.annotation_buttons["text"] = self.text_annotation_button
+
+        # click root window to get focus
+        self.bind("<Button-1>", lambda ev: self.focus_set())
+
+        # toggle console while console has focus or root window has focus
+        self.bind("<Control-t>", self.toggle_console)
+        self.console_input.bind("<Control-t>", self.toggle_console)
+
 
     def clear_canvas(self):
         self.canvas.delete("all")
@@ -411,6 +457,27 @@ class DrawApp(tk.Frame):
         self.console.add_line(command_text)
 
         self.control.process_command(command_text)
+
+    def toggle_annotation_mode(self, mode):
+        if self.annotation_mode == mode:
+            self.annotation_mode = None
+        else:
+            self.annotation_mode = mode
+
+    def toggle_console(self, event):
+        """Hide/show console"""
+
+        if self.console.hidden:
+            self.console.place(relwidth=0.25, relheight=0.85, relx=0.05, rely=0.05)
+            self.canvas.place(relwidth=0.6, relheight=0.9, relx=0.35, rely=0.05)
+        else:
+            self.canvas.place(relwidth=self.canvas.relwidth + self.console.relwidth + 0.05,
+                              relheight=self.canvas.relheight,
+                              relx=self.console.relx, rely=self.console.rely)
+
+            self.console.place(relwidth=0, relheight=0, relx=0, rely=0)
+
+        self.console.hidden = not self.console.hidden
 
 
 
