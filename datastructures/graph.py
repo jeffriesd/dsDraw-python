@@ -13,6 +13,10 @@ class GraphNode(object):
         self.dx = 0
         self.dy = 0
 
+        # keep track of ID so nodes can be moved
+        # instead of deleting/redrawing every time
+        self.tk_id = None
+
         self.color = "white"
 
     def __repr__(self):
