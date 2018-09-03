@@ -35,18 +35,19 @@ class CommandThread(threading.Thread):
         except Exception as e:
             self.caller.raise_cmd_ex(e, self.text)
 
-class LoopThread(threading.Thread):
+class GraphSimThread(threading.Thread):
 
-    def __init__(self, target, n_iter, sleep_time):
+    def __init__(self, n_iter, render):
         super().__init__()
-        self.target = target
         self.n_iter = n_iter
-        self.sleep_time = sleep_time
+        self.render = render
 
     def run(self):
-        for _ in range(self.n_iter):
-            self.target()
-            sleep(self.sleep_time)
+        self.render.simulating = True
+        for i in range(self.n_iter):
+            self.render.move_nodes()
+            self.render.display(do_render=False)
+        self.render.simulating = False
 
 
 
