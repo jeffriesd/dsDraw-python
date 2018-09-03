@@ -16,16 +16,55 @@ class MyStdOut(object):
         self.console.clear_input()
 
 
+class VariableEnvironment(dict):
+    def __init__(self):
+        """
+        Handles variables created by
+        user in console.
+        """
+        super().__init__()
+        self.variables = {}
+        self.recently_touched = []
+
+    def __getitem__(self, var_name):
+        """
+        Update a data structure's state
+        any time it gets accessed.
+        """
+        # var_name may not be a data structure
+        try:
+            self.variables[var_name].add_state_to_history()
+        except AttributeError:
+            # not a data structure
+            pass
+        except NotImplementedError:
+            # clone not implemented,
+            # cant update history
+            pass
+        finally:
+            # append to recents list for redrawing
+            self.recently_touched.append(var_name)
+
+        return self.variables[var_name]
+
+    def __setitem__(self, var_name, value):
+        self.variables[var_name] = value
+
+    def __delitem__(self, var_name):
+        del self.variables[var_name]
+
+
 class EmbeddedShell(InteractiveConsole):
 
     def __init__(self, console, locals=None, filename=None):
         super().__init__(locals, filename)
+        self.locals = VariableEnvironment()
         self.console = console
         self.my_std_out = MyStdOut(self.console)
 
-        self.datastructures = import_module("datastructures.tree")
-
     def runcode(self, code):
+        # reset list of recently touched data structures
+        self.locals.recently_touched = []
         with redirect_stdout(self.my_std_out):
             try:
                 # use temp_var to get return value from exec
@@ -49,6 +88,9 @@ class EmbeddedShell(InteractiveConsole):
             except Exception as e:
                 self.showtraceback()
                 print("[ERROR]: " + str(e))
+
+        # return list of recently touched data structures for redrawing
+        return self.locals.recently_touched
 
     def push(self, line):
         self.console.add_line(line, is_command=False)
