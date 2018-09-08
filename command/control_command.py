@@ -141,6 +141,7 @@ class ShowRenderCommand(DSCommand):
     def execute(self):
         self.receiver.add_model_to_view(self.model_name)
 
+
     def undo(self):
         close_cmd = CloseRenderCommand(self.receiver, self.model_name, self.should_redraw)
         close_cmd.execute()
@@ -178,6 +179,10 @@ class CloseRenderCommand(DSCommand):
 
             # update canvas so splits happen correctly
             self.receiver.view.canvas.update()
+
+        # delete interactive object and reassign model to model_name
+        self.receiver.my_variables[self.model_name] = self.receiver.my_variables["_" + self.model_name]
+        del self.receiver.my_variables["_" + self.model_name]
 
     def undo(self):
         self.receiver.add_model_to_view(self.model_name)
