@@ -11,11 +11,6 @@ class RenderObject(object):
         self.model = model
         self.name = name
 
-        # keep track of tkinter objects created
-        # by the data structure so it can be redrawn
-        # without removing annotations
-        self.render_ids = []
-
         self.tick = .15
         self.focused = False
 
@@ -23,10 +18,9 @@ class RenderObject(object):
         """
         Only delete items created by render object/data structure.
         """
-        # for id in self.render_ids:
-        #     self.render_ids.remove(id)
-        #     self.canvas.delete(id)
-        self.canvas.delete("all")
+        for id in self.canvas.find_all():
+            if id not in self.canvas.annotator.annotation_ids:
+                self.canvas.delete(id)
 
 
 class RenderTree(RenderObject):
@@ -56,12 +50,6 @@ class RenderTree(RenderObject):
             clears canvas, and draws to canvas
             :param do_render - flag whether to run render algorithm again or not
             :param do_sleep - flag whether to pause for animation purposes or not"""
-
-        # show focus with bg color
-        if self.focused:
-            self.canvas.configure(bg="#ddd")
-        else:
-            self.canvas.configure(bg="#aaa")
 
         if not self.model.root:
             return
@@ -101,7 +89,6 @@ class RenderTree(RenderObject):
                """
         # show name in top left corner
         name = self.canvas.create_text(5, 5, text=self.name, anchor="nw", font=default_font())
-        #self.render_ids.append(name)
 
         # if circle set to True, then
         # pick smaller of width/height
@@ -128,7 +115,6 @@ class RenderTree(RenderObject):
                 color = "blue" if c.val <= node.val else "red"
                 color = "green" if c.val == node.val else color
                 edge = self.canvas.create_line(*centers, fill=color, width=2)
-                #self.render_ids.append(edge)
 
             # draw nodes at 50% size as to not block
             # drawing of edges
@@ -137,7 +123,6 @@ class RenderTree(RenderObject):
             # self.model.logger.debug("Drawing Node(%s) at %.2f, %.2f" % (node.val, x0_n, y0_n))
 
             oval = self.canvas.create_oval(x0_n, y0_n, x0_n + cell_w / 2, y0_n + cell_h / 2, fill=node.color)
-            #self.render_ids.append(oval)
             # node_text = ("%sCC:\n%i, %i\ns:%i, d:%i"
             #                               % (node, node.x, node.y,
             #                                  node.get_size(), node.depth))
@@ -148,7 +133,7 @@ class RenderTree(RenderObject):
 
             val_text = self.canvas.create_text(x0 + cell_w / 2, y0 + cell_h / 2,
                                     text=node_text, font=default_font())
-            #self.render_ids.append(val_text)
+            
 
     def render(self):
         # # Reingold-Tilford algorithm - O(n)
@@ -528,12 +513,6 @@ class RenderGraph(RenderObject):
             :param do_render - flag whether to run render algorithm again or not
             :param do_sleep - flag whether to pause for animation purposes or not"""
 
-        # show focus with bg color
-        if self.focused:
-            self.canvas.configure(bg="#ddd")
-        else:
-            self.canvas.configure(bg="#aaa")
-
         if not self.graph.nodes:
             return
 
@@ -585,7 +564,7 @@ class RenderGraph(RenderObject):
         """
         # show name in top left corner
         name = self.canvas.create_text(5, 5, text=self.name, anchor="nw", font=default_font())
-        #self.render_ids.append(name)
+        
 
         # if circle set to True, then
         # pick smaller of width/height
@@ -608,7 +587,7 @@ class RenderGraph(RenderObject):
 
             color = "black"
             edge = self.canvas.create_line(*centers, fill=color, width=2)
-            #self.render_ids.append(edge)
+            
         for node in self.graph.nodes:
             x0 = node.x * cell_w
             y0 = node.y * cell_h
@@ -618,12 +597,12 @@ class RenderGraph(RenderObject):
             x0_n, y0_n = [x0 + 4 * cell_w / 10, y0 + 4 * cell_h / 10]
 
             node.tk_id = self.canvas.create_oval(x0_n, y0_n, x0_n + 2 * cell_w / 10, y0_n + 2 * cell_h / 10, fill=node.color)
-            #self.render_ids.append(node.tk_id)
+            
 
             node_text = node.val
             val_text = self.canvas.create_text(x0 + cell_w / 2, y0 + cell_h / 2,
                                     text=node_text, font=default_font())
-            #self.render_ids.append(val_text)
+            
 
     def move_nodes(self):
 
@@ -765,6 +744,12 @@ class RenderArray(RenderObject):
     def __init__(self, model, canvas, name=None):
         super().__init__(model, canvas, name)
         self.array = self.model
+        
+        self._hide_values = False
+        self._hide_indices = False
+
+        self._compressed = False
+        self._force_compress = False
 
         self.tick = 0.02
 
@@ -774,11 +759,6 @@ class RenderArray(RenderObject):
             :param do_render - flag whether to run render algorithm again or not
             :param do_sleep - flag whether to pause for animation purposes or not"""
 
-        # show focus with bg color
-        if self.focused:
-            self.canvas.configure(bg="#ddd")
-        else:
-            self.canvas.configure(bg="#aaa")
 
         if not self.array:
             return
@@ -802,18 +782,25 @@ class RenderArray(RenderObject):
         Leave some room on either side between edge of canvas
         and edge of array.
         """
+        # give 1/25 space on either edge of canvas
         self.side_space = self.canvas.width / 25
 
         self.cell_w = (self.canvas.width - self.side_space * 2) / len(self.array)
-        self.cell_h = self.cell_w
-        self.draw_all = True
+        self.cell_h = self.canvas.height / 4
 
         # check if values will fit inside cell nicely
-        if default_font().measure("000") > self.cell_w:
+        if default_font().measure("000") > self.cell_w or self._force_compress:
             # resize cells and only draw ends of array
-            self.cell_w = (self.canvas.width - self.side_space * 2) / 8
-            self.cell_h = self.cell_w
-            self.draw_all = False
+            num_shown = min(3, self.array.size // 2)
+
+            # denominator = num_shown * 2 + size of (...) (2)
+            self.cell_w = (self.canvas.width - self.side_space * 2) / (num_shown * 2 + 2)
+            self.cell_h = self.canvas.height / 4
+            self._compressed = True
+        else:
+            self._compressed = False
+
+        self.cell_w = self.cell_h = min(self.cell_w, self.cell_h)
 
     def render(self):
         """
@@ -827,10 +814,9 @@ class RenderArray(RenderObject):
         """
         # show name in top left corner
         name = self.canvas.create_text(5, 5, text=self.name, anchor="nw", font=default_font())
-        #self.render_ids.append(name)
 
         # draw entire array
-        if self.draw_all:
+        if not self._compressed:
             for index, arr_node in enumerate(self.array):
                 # draw rectangles
                 x_0 = self.side_space + index * self.cell_w
@@ -838,79 +824,88 @@ class RenderArray(RenderObject):
                 x_1 = x_0 + self.cell_w
                 y_1 = y_0 + self.cell_h
 
-                rect = self.canvas.create_rectangle(x_0, y_0, x_1, y_1, fill=arr_node.color)
-                #self.render_ids.append(rect)
+                # tags used for animations
+                element_tag = self.name + "_" + str(index)
+
+                rect = self.canvas.create_rectangle(x_0, y_0, x_1, y_1, fill=arr_node.color,
+                                                    tag=element_tag)
 
                 # draw text for value
-                if not self.array.hide_values:
+                if not self._hide_values:
                     val_text = self.canvas.create_text(x_0 + self.cell_w / 2, y_0 + self.cell_h / 2,
-                                            text=arr_node.value, font=default_font())
-                    #self.render_ids.append(val_text)
+                                            text=arr_node.value, font=default_font(), tag=element_tag)
 
                 # draw indices
-                ind = self.canvas.create_text(x_0 + self.cell_w / 2, y_0 - self.cell_h / 2,
-                                            text=index, font=default_font())
-                #self.render_ids.append(ind)
+                if not self._hide_indices:
+                    ind = self.canvas.create_text(x_0 + self.cell_w / 2, y_0 - self.cell_h / 2,
+                                                text=index, font=default_font())
         else:
-            # draw first 3 elements ... last 3 elements
-
-            # drawing first 3 elements
-            for index, arr_node in enumerate(self.array._array[:3]):
+            # draw first 3 elements ... last 3 elements (or less if array is < 6)
+            num_shown = min(3, self.array.size // 2)
+            
+            # drawing first num_shown elements
+            for index, arr_node in enumerate(self.array._array[:num_shown]):
                 # draw rectangles
                 x_0 = self.side_space + index * self.cell_w
                 y_0 = (self.canvas.height - self.cell_h) / 2
                 x_1 = x_0 + self.cell_w
                 y_1 = y_0 + self.cell_h
 
-                rect = self.canvas.create_rectangle(x_0, y_0, x_1, y_1, fill=arr_node.color)
-                #self.render_ids.append(rect)
+                # tags used for animations
+                element_tag = self.name + "_" + str(index)
+
+                rect = self.canvas.create_rectangle(x_0, y_0, x_1, y_1, fill=arr_node.color,
+                                                    tag=element_tag)
 
                 # draw text for value
-                if not self.array.hide_values:
+                if not self._hide_values:
                     val_text = self.canvas.create_text(x_0 + self.cell_w / 2, y_0 + self.cell_h / 2,
-                                            text=arr_node.value, font=default_font())
-                    #self.render_ids.append(val_text)
+                                            text=arr_node.value, font=default_font(), tag=element_tag)
+                    
 
                 # draw indices
-                ind = self.canvas.create_text(x_0 + self.cell_w / 2, y_0 - self.cell_h / 2,
-                                        text=index, font=default_font())
-                #self.render_ids.append(ind)
-
+                if not self._hide_indices:
+                    ind = self.canvas.create_text(x_0 + self.cell_w / 2, y_0 - self.cell_h / 2,
+                                            text=index, font=default_font())
+                
             # draw ...
-            truncated_x_0 = self.side_space + 3 * self.cell_w
+            truncated_x_0 = self.side_space + num_shown * self.cell_w
             truncated_y_0 = (self.canvas.height - self.cell_h) / 2
             truncated_x_1 = truncated_x_0 + self.cell_w * 2
             truncated_y_1 = truncated_y_0 + self.cell_h
             tr = self.canvas.create_rectangle(truncated_x_0, truncated_y_0,
                                          truncated_x_1, truncated_y_1, fill="white")
             # draw ... in array and for indices
-            tr1 = self.canvas.create_text(truncated_x_0 + self.cell_w, truncated_y_0 + self.cell_h/2,
-                                    text=" ... ", font=default_font())
-            tr2 = self.canvas.create_text(truncated_x_0 + self.cell_w, truncated_y_0 - self.cell_h / 2,
-                                    text=" ... ", font=default_font())
-            #self.render_ids.append(tr)
-            #self.render_ids.append(tr1)
-            #self.render_ids.append(tr2)
-
-            # draw last 3 elements
-            for index, arr_node in enumerate(self.array._array[-3:]):
+            if not self._hide_values:
+                tr1 = self.canvas.create_text(truncated_x_0 + self.cell_w, truncated_y_0 + self.cell_h/2,
+                                        text=" ... ", font=default_font())
+            if not self._hide_indices:
+                tr2 = self.canvas.create_text(truncated_x_0 + self.cell_w, truncated_y_0 - self.cell_h / 2,
+                                        text=" ... ", font=default_font())
+            
+            # draw last num_shown elements
+            for index, arr_node in enumerate(self.array._array[-num_shown:]):
                 # draw rectangles
                 x_0 = truncated_x_1 + index * self.cell_w
                 y_0 = (self.canvas.height - self.cell_h) / 2
                 x_1 = x_0 + self.cell_w
                 y_1 = y_0 + self.cell_h
 
-                rect = self.canvas.create_rectangle(x_0, y_0, x_1, y_1, fill=arr_node.color)
-                #self.render_ids.append(rect)
+                true_index = index + len(self.array) - num_shown
+                # tags used for animations
+                element_tag = self.name + "_" + str(true_index)
+
+                rect = self.canvas.create_rectangle(x_0, y_0, x_1, y_1, fill=arr_node.color,
+                                                    tag=element_tag)
 
                 # draw text for value
-                if not self.array.hide_values:
+                if not self._hide_values:
                     val_text = self.canvas.create_text(x_0 + self.cell_w / 2, y_0 + self.cell_h / 2,
-                                            text=arr_node.value, font=default_font())
-                    #self.render_ids.append(val_text)
+                                            text=arr_node.value, font=default_font(), tag=element_tag)
+                    
 
-                shifted_index = index + len(self.array) - 3
                 # draw indices
-                ind = self.canvas.create_text(x_0 + self.cell_w / 2, y_0 - self.cell_h / 2,
-                                        text=shifted_index, font=default_font())
-                #self.render_ids.append(ind)
+                if not self._hide_indices:
+                    ind = self.canvas.create_text(x_0 + self.cell_w / 2, y_0 - self.cell_h / 2,
+                                            text=true_index, font=default_font())
+
