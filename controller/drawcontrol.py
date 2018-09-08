@@ -99,7 +99,7 @@ class DrawControl:
         """
         for name, render_obj in self.my_renders.items():
             render_obj.focused = (name == render) or (render_obj == render)
-        self.display(do_render=False)
+            render_obj.canvas.configure(bg="#ddd" if render_obj.focused else "#aaa")
 
     def get_focused(self):
         """
@@ -190,14 +190,15 @@ class DrawControl:
                 self.view.console.add_line(err_msg, is_command=False)
             finally:
                 # redraw recently touched data structures
-                for ds_name in self.my_variables.recently_touched:
-                    try:
-                        self.my_renders[ds_name].display(do_render=True)
-                        self.logger.info("Rendering %s" % ds_name)
-                    except KeyError:
-                        pass
-                    except AttributeError:
-                        pass
+                # for ds_name in self.my_variables.recently_touched:
+                #     try:
+                #         self.my_renders[ds_name].display(do_render=True)
+                #         self.logger.info("Rendering %s" % ds_name)
+                #     except KeyError:
+                #         pass
+                #     except AttributeError:
+                #         pass
+                pass
 
     def perform_command(self, command_obj):
         """
