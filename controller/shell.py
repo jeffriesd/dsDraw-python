@@ -1,5 +1,5 @@
 from code import InteractiveConsole
-from datastructures.basic import DataStructure
+from datastructures.basic import InteractiveDataStructure
 from threading import Thread
 from contextlib import redirect_stdout, redirect_stderr
 import sys
@@ -35,7 +35,7 @@ class VariableEnvironment(dict):
         # clone may not be implemented
         try:
             reference = self.variables[var_name]
-            if isinstance(reference, DataStructure):
+            if isinstance(reference, InteractiveDataStructure):
                 reference.add_state_to_history()
         except NotImplementedError:
             # clone not implemented,
@@ -69,6 +69,7 @@ class EmbeddedShell(InteractiveConsole):
         self.my_std_out = MyStdOut(self.console)
 
         self.runcode("from datastructures.arrays import *")
+        self.runcode("from datastructures.tree import BST")
 
     def runcode(self, code):
         # reset list of recently touched data structures
