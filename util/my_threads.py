@@ -21,6 +21,7 @@ class TestThread(threading.Thread):
     def stop(self):
         self.running = False
 
+
 class CommandThread(threading.Thread):
 
     def __init__(self, target, text, caller):
@@ -34,6 +35,7 @@ class CommandThread(threading.Thread):
             self.target()
         except Exception as e:
             self.caller.raise_cmd_ex(e, self.text)
+
 
 class GraphSimThread(threading.Thread):
 
