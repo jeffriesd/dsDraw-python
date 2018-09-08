@@ -6,6 +6,7 @@ from drawtools.render import RenderTree
 import random
 from copy import copy
 from datastructures.basic import DataStructure
+from datastructures.interactive import InteractiveBST
 
 class TreeNode(object):
     def __init__(self, val, parent=None):
@@ -240,7 +241,6 @@ class TreeNode(object):
 
 class Tree(DataStructure):
     def __init__(self, root=None, name=None):
-        super().__init__()
         self.root = root
         self.max_depth = 0
 
@@ -302,6 +302,9 @@ class BST(Tree):
         initialized with reference to 'receiver'
         """
         return BSTCommandFactory(self)
+
+    def get_interactive_class(self):
+        return InteractiveBST
 
     def insert(self, el, change_color=False):
         """
