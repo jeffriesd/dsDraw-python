@@ -4,5 +4,4 @@ dsDraw is an interactive tool for drawing data structures for educational purpos
 
 # Data Structures
 
-* Array - 1 dimensional array
-  ## Commands:
+  ### Array (one dimensional)
