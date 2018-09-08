@@ -70,7 +70,10 @@ class DrawControl:
         new_canvas = self.view.canvas.new_child(model_name)
 
         # add click to raise functionality
-        new_canvas.bind("<Button-1>", lambda ev: self.give_focus(model_name))
+        def click_binding(event):
+            new_canvas.annotator.canvas_clicked(event)
+            self.give_focus(model_name)
+        new_canvas.bind("<Button-1>", click_binding)
 
         render_class = my_model.get_render_class()
         my_render = render_class(my_model, new_canvas, name=model_name)
@@ -79,6 +82,15 @@ class DrawControl:
         self.my_renders[model_name] = my_render
 
         self.give_focus(model_name)
+
+        # create interactive object and map
+        # model_name to it
+        interactive_class = my_model.get_interactive_class()
+        interactive_ds = interactive_class(self, my_model, my_render)
+
+        self.my_variables[model_name] = interactive_ds
+        self.my_variables["_" + model_name] = my_model
+
 
     def give_focus(self, render):
         """
@@ -153,14 +165,11 @@ class DrawControl:
             # e.g. trying to remove a node which isn't there
             try:
                 cmd = partial(self.perform_command, command_obj)
-                t = CommandThread(target=cmd, text=command_text, caller=self)
-                ret_value = t.start()
-                # ret_value = cmd()
-
+                cmd_thread = CommandThread(target=cmd, text=command_text, caller=self)
+                cmd_thread.start()
                 # add it to command history for undoing
                 self.command_history.appendleft(command_obj)
 
-                return ret_value
             except Exception as ex:
                 err_msg = "Error completing '%s': %s" % (command_text, ex)
                 self.logger.warning(err_msg)
@@ -171,23 +180,20 @@ class DrawControl:
         except InvalidCommandError as err:
             # attempt to run as python code
 
-            # keep track of which models get accessed
-            # for redrawing purposes.
-            recently_touched = []
-
             try:
-                recently_touched = self.python_shell.runcode(command_text)
-
+                cmd = partial(self.python_shell.runcode, command_text)
+                cmd_thread = CommandThread(target=cmd, text=command_text, caller=self)
+                cmd_thread.start()
             except SyntaxError:
                 err_msg = "Syntax error: %s" % err
                 self.logger.warning(err_msg)
                 self.view.console.add_line(err_msg, is_command=False)
             finally:
                 # redraw recently touched data structures
-                for ds_name in recently_touched:
+                for ds_name in self.my_variables.recently_touched:
                     try:
                         self.my_renders[ds_name].display(do_render=True)
-                        print("rendering %s" % ds_name)
+                        self.logger.info("Rendering %s" % ds_name)
                     except KeyError:
                         pass
                     except AttributeError:
