@@ -28,7 +28,6 @@ class GraphNode(object):
 
 class Graph(DataStructure):
     def __init__(self, prebuild_size = 0, name=None):
-        super().__init__()
         self.name = name
 
         self.nodes = []
