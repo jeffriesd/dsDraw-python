@@ -94,7 +94,6 @@ class InteractiveArray(InteractiveDataStructure):
         y_step = y_translate / v_steps
 
         x_i, _, _, _ = self._render.canvas.coords(rect_i)
-        print(x_i)
         x_j, _, _, _ = self._render.canvas.coords(rect_j)
         x_translate = int(x_j - x_i)
         x_step = x_translate / h_steps
