@@ -9,11 +9,12 @@ from textwrap import wrap
 from functools import partial
 
 
-class AnnotationButton(Button):
+class ToggleButton(Button):
 
     def __init__(self, parent, **kwargs):
         """
-        Special button to change annotation modes.
+        Special button to change modes and stay
+        in one state.
         """
         super().__init__(parent, **kwargs)
 
@@ -21,8 +22,15 @@ class AnnotationButton(Button):
 
         self.bind("<Button-1>", self.toggle)
 
-    def toggle(self, event):
-        self.active = not self.active
+    def toggle(self, event=None, active=None):
+        """
+        Call with no args to toggle or
+        True/False to set button state.
+        """
+        if active is not None:
+            self.active = active
+        else:
+            self.active = not self.active
 
         bg = "#ccc" if self.active else "#333"
         fg = "#333" if self.active else "#ccc"
@@ -94,7 +102,7 @@ class Console(Canvas):
         """
         nwidth = event.width
         nheight = event.height
-        self.config(width=nwidth, height=nheight)
+        self.configure(width=nwidth, height=nheight)
         wscale = float(event.width) / self.width
         hscale = float(event.height) / self.height
         self.scale("all", 0, 0, wscale, hscale)
@@ -243,7 +251,7 @@ class DrawCanvas(Canvas):
         """
         nwidth = event.width
         nheight = event.height
-        self.config(width=nwidth, height=nheight)
+        self.configure(width=nwidth, height=nheight)
         wscale = float(event.width) / self.width
         hscale = float(event.height) / self.height
         self.scale("all", 0, 0, wscale, hscale)
@@ -426,10 +434,18 @@ class DrawApp(tk.Frame):
 
         # add annotation buttons
         text_mode = partial(self.toggle_annotation_mode, "text")
-        self.text_annotation_button = AnnotationButton(self, text="text", bg="#333", fg="white", command=text_mode)
+        self.text_annotation_button = ToggleButton(self, text="text", bg="#333", fg="white", command=text_mode)
         self.text_annotation_button.place(relwidth=0.04, relheight=0.04, relx=0.955, rely=0.055)
+        arrow_mode = partial(self.toggle_annotation_mode, "arrow")
+        self.arrow_annotation_button = ToggleButton(self, text="->", bg="#333", fg="white", command=arrow_mode)
+        self.arrow_annotation_button.place(relwidth=0.04, relheight=0.04, relx=0.955, rely=0.100)
+        erase_mode = partial(self.toggle_annotation_mode, "erase")
+        self.erase_annotation_button = ToggleButton(self, text="erase", bg="#333", fg="white", command=erase_mode)
+        self.erase_annotation_button.place(relwidth=0.04, relheight=0.04, relx=0.955, rely=0.145)
 
         self.annotation_buttons["text"] = self.text_annotation_button
+        self.annotation_buttons["arrow"] = self.arrow_annotation_button
+        self.annotation_buttons["erase"] = self.erase_annotation_button
 
         # click root window to get focus
         self.bind("<Button-1>", lambda ev: self.focus_set())
@@ -452,6 +468,7 @@ class DrawApp(tk.Frame):
         command_text = self.console_input.get()
         self.logger.info("'%s' entered into command prompt." % command_text)
         self.console.clear_input()
+
         # reset arrow key cycle
         self.console.reset_cycle()
         self.console.add_line(command_text)
@@ -459,10 +476,18 @@ class DrawApp(tk.Frame):
         self.control.process_command(command_text)
 
     def toggle_annotation_mode(self, mode):
+        """
+        Activate/deactivate correct buttons
+        """
         if self.annotation_mode == mode:
             self.annotation_mode = None
         else:
             self.annotation_mode = mode
+
+        # turn off all other buttons if they are active
+        for button in self.annotation_buttons:
+            if button != mode:
+                self.annotation_buttons[button].toggle(active=False)
 
     def toggle_console(self, event):
         """Hide/show console"""
