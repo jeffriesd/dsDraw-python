@@ -6,9 +6,6 @@ from collections import deque
 
 class DataStructure(object):
 
-    def __init__(self):
-        self.state_history = deque(maxlen=10)
-
     def set_name(self, name):
         self.name = name
 
@@ -37,8 +34,8 @@ class DataStructure(object):
         :param message: message to log
         :return:
         """
-
         message = "\t" * indent * 1 + message
+
         try:
             if self.logger:
                 log_func = log.to_function(self.logger, level_str)
@@ -47,10 +44,33 @@ class DataStructure(object):
             pass
             # print("no logger ; message was %s" % message)
 
-    def add_state_to_history(self):
-        current_state = self.clone()
-        self.state_history.appendleft(current_state)
+
 
     def clone(self):
         raise NotImplementedError("Clone not implemented for %s" % self)
 
+
+class InteractiveDataStructure(object):
+    """
+    Class to bind together render object and
+    model so that animated commands can be performed
+    on the data structure without the DataStructure
+    object needing to call the render object.
+
+    This is the class that is exposed to the user
+    and contains the methods they can use to interact
+    with the data structure.
+
+    Also maintains state information and allows for
+    undo/redo
+    """
+    def __init__(self, control, model, render):
+
+        self._control = control
+        self._model = model
+        self._render = render
+        self._state_history = deque(maxlen=10)
+
+    def add_state_to_history(self):
+        current_state = self._model.clone()
+        self._state_history.appendleft(current_state)
