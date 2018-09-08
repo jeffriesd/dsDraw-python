@@ -1,6 +1,10 @@
 from datastructures.basic import DataStructure
 from drawtools.render import RenderArray
 from drawtools import dsDraw_colors
+from datastructures.basic import InteractiveDataStructure
+from datastructures.interactive import InteractiveArray
+from util.exceptions import InvalidCommandError
+import time
 import random
 
 
@@ -22,7 +26,6 @@ class Array(DataStructure):
 
         :param prebuild: integer or iterable of values
         """
-        super().__init__()
 
         if prebuild is None:
             # 8 cells fit nicely on screen as default size
@@ -48,20 +51,6 @@ class Array(DataStructure):
     def __len__(self):
         return self.size
 
-    def __getitem__(self, index):
-        """
-        Access _array
-        """
-        return self._array[index].value
-
-    def __setitem__(self, index, value):
-        """
-        Modify array value at index. Keep color
-        of node currently at index.
-        """
-        cur_color = self._array[index].color
-        self._array[index] = ArrayNode(value, color=cur_color)
-
     def clone(self):
         clone = Array(prebuild=self._array)
         return clone
@@ -69,29 +58,7 @@ class Array(DataStructure):
     def get_render_class(self):
         return RenderArray
 
-    def color(self, indices, color_name):
-        """
-        Assign a new color to array[index].
-        Must be valid color (in dsDraw_colors)
-        :param indices: index or tuple of indices
-        :param color_name: key to dsDraw_colors dict
-        """
-        try:
-            color = dsDraw_colors[color_name]
-        except KeyError:
-            raise Exception("Invalid color '%s'" % color_name)
-
-        if isinstance(indices, int):
-            index = indices
-            self._array[index].color = color
-        else:
-            low, high = indices
-            for i in range(low, high):
-                self._array[i].color = color
+    def get_interactive_class(self):
+        return InteractiveArray
 
 
-if __name__ == '__main__':
-    a = Array(size=10)
-    print(a._array)
-    a[0] = 999
-    print(a._array)
