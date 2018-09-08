@@ -1,11 +1,12 @@
-from datastructures import tree, graph
+from datastructures import tree, graph, arrays
 
 class ModelFactory(object):
     def __init__(self):
         self.model_types = {
             "bst": tree.BST,
             "heap": tree.BinaryHeap,
-            "graph": graph.Graph
+            "graph": graph.Graph,
+            "array": arrays.Array,
         }
 
     def create_model(self, model_type_name, *other_args):
