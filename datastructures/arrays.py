@@ -18,7 +18,7 @@ class ArrayNode(object):
 
 
 class Array(DataStructure):
-    def __init__(self, prebuild=None, hide=False):
+    def __init__(self, prebuild=None):
         """
         Basic Array class composed of
         ArrayNodes. ArrayNodes currently contain
@@ -39,7 +39,6 @@ class Array(DataStructure):
             self._array = [ArrayNode(value=x) for x in prebuild]
             self.size = len(self._array)
 
-        self.hide_values = hide
 
     def __repr__(self):
         return "Array of size %s" % self.size
@@ -52,8 +51,23 @@ class Array(DataStructure):
         return self.size
 
     def clone(self):
-        clone = Array(prebuild=self._array)
+        """
+        Copy value and color of each element.
+        """
+        clone = Array(prebuild=self.size)
+
+        for index, arr_node in enumerate(self._array):
+            clone._array[index].value = arr_node.value
+            clone._array[index].color = arr_node.color
+
         return clone
+
+    def set_state(self, clone):
+        """
+        Replace current array with clone
+        """
+        self._array = clone._array
+        self.size = clone.size
 
     def get_render_class(self):
         return RenderArray
