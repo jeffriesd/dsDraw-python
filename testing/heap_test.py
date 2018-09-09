@@ -62,8 +62,8 @@ class GenericHeapTest(unittest.TestCase):
                 all_descendants = list(subtree)
                 max_d = max([node.depth for node in all_descendants])
                 only_max_depth = list(filter(lambda n: n.depth == max_d, all_descendants))
-                # xleft = min(only_max_depth, key=lambda n: n.val)
-                # xright = max(only_max_depth, key=lambda n: n.val)
+                # xleft = min(only_max_depth, key=lambda n: n.value)
+                # xright = max(only_max_depth, key=lambda n: n.value)
 
                 xleft = only_max_depth[0]
                 xright = only_max_depth[-1]

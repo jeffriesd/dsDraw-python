@@ -57,9 +57,9 @@ class GenericBSTTest(unittest.TestCase):
         for node in self.tree:
             # left <= parent
             if node.left_child():
-                self.assertLessEqual(node.left_child().val, node.val)
+                self.assertLessEqual(node.left_child().value, node.value)
             if node.right_child():
-                self.assertLess(node.val, node.right_child().val)
+                self.assertLess(node.value, node.right_child().value)
 
     def test_extreme_descendants(self):
         """
@@ -75,8 +75,8 @@ class GenericBSTTest(unittest.TestCase):
                 all_descendants = list(subtree)
                 max_d = max([node.depth for node in all_descendants])
                 only_max_depth = list(filter(lambda n: n.depth == max_d, all_descendants))
-                xleft = min(only_max_depth, key=lambda n: n.val)
-                xright = max(only_max_depth, key=lambda n: n.val)
+                xleft = min(only_max_depth, key=lambda n: n.value)
+                xright = max(only_max_depth, key=lambda n: n.value)
 
             self.assertEqual(xleft, subtree.xleft, msg="Extreme left of %s should be %s" % (subtree, xleft))
             self.assertEqual(xright, subtree.xright, msg="Extreme right of %s should be %s" % (subtree, xright))

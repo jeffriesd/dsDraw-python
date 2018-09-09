@@ -69,7 +69,7 @@ class BSTFindCommand(ModelCommand):
         try:
             int_val = int(self.value)
         except ValueError:
-            node_ref = self.receiver.find(node_ref.val, change_color=self.change_color)
+            node_ref = self.receiver.find(node_ref.value, change_color=self.change_color)
 
         return node_ref
 
