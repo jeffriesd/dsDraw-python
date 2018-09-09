@@ -55,7 +55,7 @@ If the drawing area is already occupied, the current active pane will be split a
    
    
 # Hotkeys
-* Control + Z: undo last operation
+* Control + Z: undo last operation on active pane
 * Control + T: hide/show console
     
  
