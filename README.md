@@ -8,6 +8,8 @@ If the drawing area is already occupied, the current active pane will be split a
 # Data Structures
 
   ### Array (one dimensional)
+  Arrays are drawn as a series of adjacent square cells with white fill as default. If the array is too long and 
+  the values won't fit inside the cells, the array is compressed to show only the beginning and end elements.
   To create a new array, provide an iterable of values or a number of elements to fill the array with random values.
   
   e.g.
@@ -26,6 +28,9 @@ If the drawing area is already occupied, the current active pane will be split a
     Visually swaps the elements at indices i and j.
   * color("c", i, j) --
     Colors elements i to j (inclusive) with the specified color. Currently supports the following colors: red, pink, orange, yellow, green, light green, blue, light blue, purple.
+  * hide_values() -- toggles visibility of array values
+  * hide_indices() -- toggles visibility of array indices
+  * compress() -- toggles forced compression. If the array is already compressed because of its size, this won't do anything.
     
    ### BST (Binary Search Tree)
    To create a new bst, provide
