@@ -73,6 +73,10 @@ class DrawControl:
         def click_binding(event):
             new_canvas.annotator.canvas_clicked(event)
             self.give_focus(model_name)
+            # composite canvas gets keyboard focus when
+            # any child canvas clicked
+            new_canvas.parent.focus_set()
+
         new_canvas.bind("<Button-1>", click_binding)
 
         render_class = my_model.get_render_class()
@@ -230,27 +234,47 @@ class DrawControl:
 
         return command_value
 
+    # def process_undo(self, event=None):
+    #     """
+    #     Gets most recent command from command_history deque
+    #     and start a new thread to perform the undo/redraw
+    #     """
+    #     try:
+    #         last_command = self.command_history.popleft()
+    #         undo_text = "Undoing '%s' on %s" % (last_command, last_command.receiver)
+    #         self.logger.info(undo_text)
+    #
+    #         # start new thread to perform undo
+    #         perform_undo = partial(self.perform_undo, last_command)
+    #         undo_thread = CommandThread(target=perform_undo, text=undo_text,caller=self)
+    #         undo_thread.start()
+    #
+    #         self.view.console.add_line(undo_text, is_command=False)
+    #
+    #     except IndexError as e:
+    #         err_msg = "Error: Nothing left to undo"
+    #         self.logger.error(err_msg)
+    #         self.view.console.add_line(err_msg, is_command=False)
+
     def process_undo(self, event=None):
         """
-        Gets most recent command from command_history deque
-        and start a new thread to perform the undo/redraw
+        Get current active render object
+        and call revert state on its interactive
+        object.
         """
+        active_render = self.get_focused()
+        # name access causes new state to be saved
+        interactive_obj = self.my_variables[active_render.name]
+        # removing state that was just created
+        interactive_obj._state_history.popleft()
+
         try:
-            last_command = self.command_history.popleft()
-            undo_text = "Undoing '%s' on %s" % (last_command, last_command.receiver)
-            self.logger.info(undo_text)
-
-            # start new thread to perform undo
-            perform_undo = partial(self.perform_undo, last_command)
-            undo_thread = CommandThread(target=perform_undo, text=undo_text,caller=self)
-            undo_thread.start()
-
-            self.view.console.add_line(undo_text, is_command=False)
-
-        except IndexError as e:
-            err_msg = "Error: Nothing left to undo"
-            self.logger.error(err_msg)
-            self.view.console.add_line(err_msg, is_command=False)
+            interactive_obj.revert_state()
+        except IndexError:
+            # pop from empty deque
+            msg = "Cannot perform undo: Nothing left to undo for '%s'" % active_render.name
+            self.view.console.add_line(msg, is_command=False)
+            raise InvalidCommandError(msg)
 
     def perform_undo(self, last_command):
         """
