@@ -60,6 +60,7 @@ class TextBox(Text):
     def clicked(self, event):
         self.start_x = event.x
         self.start_y = event.y
+        self.lift()
 
         if self.parent.get_annotation_mode() == "erase":
             self.delete_annotation()
@@ -131,6 +132,8 @@ class Arrow(object):
     def clicked(self, event):
         self.start_x = event.x
         self.start_y = event.y
+
+        self.parent.tag_raise(self.tk_id)
 
         # assign closest point to click for re-aligning arc
         self.moving_point = self.get_point(event.x, event.y)
@@ -247,7 +250,6 @@ class Annotator(object):
         """
         self.canvas = canvas
         # add bindings for annotating canvas by clicking
-        self.canvas.bind("<Button-1>", self.canvas_clicked)
         self.canvas.bind("<B1-Motion>", self.canvas_mouse_hold)
         self.canvas.bind("<ButtonRelease-1>", self.canvas_mouse_released)
 
@@ -293,9 +295,11 @@ class Annotator(object):
         if current_mode == "text":
             self.canvas.delete(self.new_text_rect_id)
 
-            new_textbox = TextBox(self.canvas, self.start_x, self.start_y,
-                                   event.x, event.y, bg="white")
-            self.annotation_ids.add(new_textbox)
+            # dont allow text boxes smaller than 25x25 pixels
+            if abs(self.start_x - event.x) > 25 and abs(self.start_y - event.y) > 25:
+                new_textbox = TextBox(self.canvas, self.start_x, self.start_y,
+                                       event.x, event.y, bg="white")
+                self.annotation_ids.add(new_textbox)
 
         elif current_mode == "arrow":
             self.canvas.delete(self.new_arrow_id)
