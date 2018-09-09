@@ -6,7 +6,7 @@ import random
 
 
 class RenderObject(object):
-    def __init__(self, model, canvas, name=None):
+    def __init__(self, model, canvas, name):
         self.canvas = canvas
         self.model = model
         self.name = name
@@ -112,28 +112,27 @@ class RenderTree(RenderObject):
                 centers = [pt + off for pt, off in zip(pts, center_offsets)]
 
                 # show color for bst property
-                color = "blue" if c.val <= node.val else "red"
-                color = "green" if c.val == node.val else color
+                color = "blue" if c.value <= node.value else "red"
+                color = "green" if c.value == node.value else color
                 edge = self.canvas.create_line(*centers, fill=color, width=2)
 
             # draw nodes at 50% size as to not block
             # drawing of edges
             x0_n, y0_n = [x0 + cell_w / 4, y0 + cell_h / 4]
 
-            # self.model.logger.debug("Drawing Node(%s) at %.2f, %.2f" % (node.val, x0_n, y0_n))
+            # self.model.logger.debug("Drawing Node(%s) at %.2f, %.2f" % (node.value, x0_n, y0_n))
 
             oval = self.canvas.create_oval(x0_n, y0_n, x0_n + cell_w / 2, y0_n + cell_h / 2, fill=node.color)
             # node_text = ("%sCC:\n%i, %i\ns:%i, d:%i"
             #                               % (node, node.x, node.y,
             #                                  node.get_size(), node.depth))
             # node_text = ("%s\nd: %s; s: %s" % ("   " + str(node), node.depth, node.get_size()))
-            # node_text = ("%s\nxl: %s, xr: %s\nd:%s; s:%s" % (node.val, node.get_xleft().val, node.get_xright().val, node.depth, node.get_size()))
-            node_text = node.val
+            # node_text = ("%s\nxl: %s, xr: %s\nd:%s; s:%s" % (node.value, node.get_xleft().value, node.get_xright().value, node.depth, node.get_size()))
+            node_text = node.value
             # node_text = ""
 
             val_text = self.canvas.create_text(x0 + cell_w / 2, y0 + cell_h / 2,
                                     text=node_text, font=default_font())
-            
 
     def render(self):
         # # Reingold-Tilford algorithm - O(n)
@@ -402,93 +401,9 @@ class RenderTree(RenderObject):
             self._petrify_tr(T.left_child(), x - T.par_offset)
             self._petrify_tr(T.right_child(), x + T.par_offset)
 
-    def setup_ws(self):
-        """
-        Wrapper function to initialize next_xs
-        and offset dictionaries and call
-        recursive function
-        """
-        self.next_xs = defaultdict(int)
-        self.offsets = defaultdict(int)
 
-        self._setup_ws(self.tree.root, 0)
 
-    def _setup_ws(self, cur_node, depth):
-        # assign coordinates in bottom up fashion (postorder)
-        for node in cur_node.children():
-            self._setup_ws(node, depth + 1)
 
-        cur_node.y = depth
-
-        if cur_node.is_leaf():
-            # if node is a leaf, simply assign
-            # it the next available x coord
-            place = self.next_xs[depth]
-            cur_node.x = place
-        elif len(cur_node.children()) == 1:
-            # if one child, place just left of child
-            child = cur_node.children()[0]
-            if child.val <= cur_node.val:
-                place = child.x + 1
-            else:
-                place = child.x - 1
-        else:
-            # if two children, center over children
-            xsum = cur_node.left_child().x + cur_node.right_child().x
-            place = xsum / 2
-
-        # determine offset
-        self.offsets[depth] = max(self.offsets[depth], self.next_xs[depth] - place)
-
-        if not cur_node.is_leaf():
-            cur_node.x = place + self.offsets[depth]
-
-        self.next_xs[depth] += 2
-        cur_node.shift = self.offsets[depth]
-
-    def add_shifts(self, cur_node, modsum=0):
-        """
-        Recursively add x shifts in an
-        inorder traversal to place nodes
-        in final position
-        """
-        cur_node.x = cur_node.x + modsum
-        modsum += cur_node.shift
-
-        for node in cur_node.children():
-            self.add_shifts(node, modsum)
-
-    def render_ws(self):
-        """
-        Wrapper function to initialize
-        'nexts' list and call recursive
-        function (Wetherell-Shannon algorithm)
-        """
-        # NAIVE WS ALGORITHM
-        self.next_xs = [0] * (self.tree.max_depth + 1 + 1)
-        self.max_x = 0
-        self.max_y = 0
-        self._render_ws(self.tree.root, 0)
-
-        ## improved WS algorithm
-        # self.setup_ws()
-        # self.add_shifts(self.root)
-
-    def _render_ws(self, cur_node, depth):
-        """Naive WS algorithm - doesn't center children"""
-        x = self.next_xs[depth]
-        y = depth
-
-        cur_node.x = x
-        cur_node.y = y
-
-        self.max_x = max(x, self.max_x)
-
-        self.max_y = max(y, self.max_y)
-
-        self.next_xs[depth] += 1
-        for node in cur_node.children():
-            self._render_ws(node, depth + 1)
 
 
 class RenderGraph(RenderObject):
@@ -599,10 +514,10 @@ class RenderGraph(RenderObject):
             node.tk_id = self.canvas.create_oval(x0_n, y0_n, x0_n + 2 * cell_w / 10, y0_n + 2 * cell_h / 10, fill=node.color)
             
 
-            node_text = node.val
+            node_text = node.value
             val_text = self.canvas.create_text(x0 + cell_w / 2, y0 + cell_h / 2,
                                     text=node_text, font=default_font())
-            
+
 
     def move_nodes(self):
 
