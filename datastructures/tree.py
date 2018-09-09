@@ -6,13 +6,13 @@ from drawtools.render import RenderTree
 import random
 from copy import copy
 from datastructures.basic import DataStructure
-from datastructures.interactive import InteractiveBST
+from datastructures.interactive import InteractiveBST, InteractiveBinaryHeap
 
 class TreeNode(object):
-    def __init__(self, val, parent=None):
+    def __init__(self, value, parent=None):
         """
         TreeNode class
-        :param val: value stored in node -- currently only using ints
+        :param value: value stored in node -- currently only using ints
         :param parent: reference to parent node
 
         left: reference to left child
@@ -22,7 +22,7 @@ class TreeNode(object):
         par_offset: horizontal offset from this node to parent
         root_offset: horizontal offset from this node to root
         """
-        self.val = val
+        self.value = value
         self.parent = parent
         self.left = None
         self.right = None
@@ -48,20 +48,16 @@ class TreeNode(object):
         self.color = "white"
 
     def __repr__(self):
-        return "Node(%s)" % self.val
+        return "Node(%s)" % self.value
 
     def __lt__(self, other):
-        return self.val < other.val
-
+        return self.value < other.value
     def __gt__(self, other):
-        return self.val > other.val
-
+        return self.value > other.value
     def __le__(self, other):
-        return self.val <= other.val
-
+        return self.value <= other.value
     def __ge__(self, other):
-        return self.val >= other.val
-
+        return self.value >= other.value
     def __iter__(self):
         """Inorder traversal"""
         if self.left_child():
@@ -151,8 +147,8 @@ class TreeNode(object):
 
         deepest = list(filter(lambda n: n.depth == max_d, child_extremes))
 
-        # self.xleft = min(deepest, key=lambda n: n.val)
-        # self.xright = max(deepest, key=lambda n: n.val)
+        # self.xleft = min(deepest, key=lambda n: n.value)
+        # self.xright = max(deepest, key=lambda n: n.value)
         self.xleft = deepest[0]
         self.xright = deepest[-1]
 
@@ -242,7 +238,6 @@ class TreeNode(object):
 class Tree(DataStructure):
     def __init__(self, root=None, name=None):
         self.root = root
-        self.max_depth = 0
 
         # assign name for getting corresponding render object
         self.name = name
@@ -258,7 +253,9 @@ class Tree(DataStructure):
 
     def preorder(self):
         """Wrapper for TreeNode preorder"""
-        return self.root.preorder()
+        if self.root:
+            return self.root.preorder()
+        return []
 
     def postorder(self):
         """Wrapper for TreeNode postorder"""
@@ -291,10 +288,21 @@ class BST(Tree):
         return "BST with root %s" % self.root
 
     def clone(self):
+        """
+        Create a deep copy of BST
+        """
         clone = BST()
         for node in self.preorder():
-            clone.insert(node.val)
+            clone.insert(node.value)
         return clone
+
+    def set_state(self, clone):
+        """
+        Replace current state with that
+        of clone. Shallow copy is fine because
+        clones are discarded once used for reverting state.
+        """
+        self.root = clone.root
 
     def get_command_factory(self):
         """
@@ -335,15 +343,15 @@ class BST(Tree):
             self.control.my_renders[self.name].display(do_render=False, do_sleep=True)
             cur_node.color = 'white'
 
-        if el <= cur_node.val:
-            self.log("debug", "%i <= %i; going left" % (el, cur_node.val))
+        if el <= cur_node.value:
+            self.log("debug", "%i <= %i; going left" % (el, cur_node.value))
             if cur_node.left:
                 cur_node.left = self._insert(cur_node.left, el, change_color)
             else:
                 self.log("debug", "new leaf (%s)" % (el))
                 cur_node.left = TreeNode(el, parent=cur_node)
         else:
-            self.log("debug", "%i > %i; going right" % (el, cur_node.val))
+            self.log("debug", "%i > %i; going right" % (el, cur_node.value))
             if cur_node.right:
                 cur_node.right = self._insert(cur_node.right, el, change_color)
             else:
@@ -385,7 +393,7 @@ class BST(Tree):
             self.control.my_renders[self.name].display(do_render=False, do_sleep=True)
             cur_node.color = 'white'
 
-        if el == cur_node.val:
+        if el == cur_node.value:
             if cur_node.left is None:
                 return cur_node.right
             elif cur_node.right is None:
@@ -394,13 +402,13 @@ class BST(Tree):
                 # swap current node with predecessor and
                 # then remove it from its new location
                 pred = cur_node.predecessor()
-                cur_node.val = pred.val
-                cur_node.left = self._remove(cur_node.left, pred.val, change_color)
+                cur_node.value = pred.value
+                cur_node.left = self._remove(cur_node.left, pred.value, change_color)
 
         # recurse left or right
-        elif el < cur_node.val:
+        elif el < cur_node.value:
             cur_node.left = self._remove(cur_node.left, el, change_color)
-        elif el > cur_node.val:
+        elif el > cur_node.value:
             cur_node.right = self._remove(cur_node.right, el, change_color)
 
         cur_node.update_size()
@@ -422,7 +430,7 @@ class BST(Tree):
             self.control.my_renders[self.name].display(do_render=False, do_sleep=True)
             cur_node.color = 'white'
 
-        if el == cur_node.val:
+        if el == cur_node.value:
             # case 1
             if cur_node.is_leaf():
                 return None
@@ -430,24 +438,23 @@ class BST(Tree):
             elif cur_node.size == 2:
                 # swap with child (only need to swap values)
                 child = cur_node.children()[0]
-                cur_node = self._remove_swap(cur_node, child.val, change_color)
-                cur_node.val = child.val
-            # case 3
+                cur_node = self._remove_swap(cur_node, child.value, change_color)
+                cur_node.value = child.value            # case 3
             else:
                 # pick predecessor or successor (chosen in that order)
                 ps = cur_node.pred_or_succ()
                 if ps:
                     # swap value with pred/succ
-                    pval = ps.val
-                    ps.val = cur_node.val
-                    cur_node.val = pval
+                    pval = ps.value
+                    ps.value = cur_node.value
+                    cur_node.value = pval
 
                     # now that node to be removed has been swapped,
                     # remove it (first determine if it is a left or right child)
                     if ps.is_left_child():
-                        ps.parent.left = self._remove_swap(ps, ps.val, change_color)
+                        ps.parent.left = self._remove_swap(ps, ps.value, change_color)
                     else:
-                        ps.parent.right = self._remove_swap(ps, ps.val, change_color)
+                        ps.parent.right = self._remove_swap(ps, ps.value, change_color)
 
                     # when final swap happens, make O(log n) traversal
                     # back up to root to update sizes and descendants
@@ -459,9 +466,9 @@ class BST(Tree):
                             node = node.parent
 
         # recurse left or right
-        elif el < cur_node.val:
+        elif el < cur_node.value:
             cur_node.left = self._remove_swap(cur_node.left, el, change_color)
-        elif el > cur_node.val:
+        elif el > cur_node.value:
             cur_node.right = self._remove_swap(cur_node.right, el, change_color)
 
         cur_node.update_size()
@@ -469,7 +476,7 @@ class BST(Tree):
 
         return cur_node
 
-    def find(self, el, change_color):
+    def find(self, el, change_color=False):
         """Wrapper method for recursive find function"""
         return self._find(self.root, el, change_color)
 
@@ -484,13 +491,13 @@ class BST(Tree):
             self.control.my_renders[self.name].display(do_render=False, do_sleep=True)
             cur_node.color = "white"
 
-        if cur_node.val == el:
+        if cur_node.value == el:
             return cur_node
 
         if cur_node.is_leaf():
             return None
 
-        if el <= cur_node.val:
+        if el <= cur_node.value:
             return self._find(cur_node.left, el, change_color)
         else:
             return self._find(cur_node.right, el, change_color)
@@ -600,12 +607,12 @@ class BST(Tree):
 
 
 class HeapNode(TreeNode):
-    def __init__(self, val, heap, index=-1, parent=None):
+    def __init__(self, value, heap, index=-1, parent=None):
         """
         Heap node must be initialized with reference
         to the heap class for getting left and right
         _children as well as parent references."""
-        super().__init__(val, parent=parent)
+        super().__init__(value, parent=parent)
 
         self.heap = heap
 
@@ -629,7 +636,6 @@ class BinaryHeap(Tree):
         super().__init__(root, name)
 
         self.root = root
-        self.max_depth = 0
 
         # assign name for getting corresponding render object
         self.name = name
@@ -660,15 +666,27 @@ class BinaryHeap(Tree):
     def clone(self):
         clone = BinaryHeap()
         for node in self.heap_array:
-            clone.insert_key(node.val)
+            clone.insert_key(node.value)
 
         return clone
 
+    def set_state(self, clone):
+        """
+        Replace current state with clone.
+        Shallow copy is fine because clones
+        are discarded after being used to revert
+        state.
+        """
+        self.heap_array = clone.heap_array
+
     def print_heap(self):
-        print(list(map(lambda node: node.val, self.heap_array)))
+        print(list(map(lambda node: node.value, self.heap_array)))
 
     def get_command_factory(self):
         return BinaryHeapCommandFactory(self)
+
+    def get_interactive_class(self):
+        return InteractiveBinaryHeap
 
     def find(self, key, change_color=False):
         """Linear search by node value"""
@@ -677,7 +695,7 @@ class BinaryHeap(Tree):
                 node.color = 'red'
                 self.control.my_renders[self.name].display(do_render=True, do_sleep=True)
                 node.color = 'white'
-            if node.val == key:
+            if node.value == key:
                 return node
         return None
 
@@ -729,16 +747,16 @@ class BinaryHeap(Tree):
         """
         Decrease key value and sift up/down as needed.
         """
-        node.val = new_value
+        node.value = new_value
         index = self.heap_array.index(node)
         p = self.heap_parent(index)
         l = self.heap_left(index)
         r = self.heap_right(index)
 
         # check heap property
-        if node.val < p.val:
+        if node.value < p.value:
             self.sift_up(index, change_color=change_color)
-        elif l.val < node.val or r.val < node.val:
+        elif l.value < node.value or r.value < node.value:
             self.sift_down(index, change_color=change_color)
 
     def remove_min(self, change_color=False):
@@ -780,16 +798,16 @@ class BinaryHeap(Tree):
             child = r
             index = self.right_index(index)
 
-        while p.val > child.val:
+        while p.value > child.value:
             if change_color:
                 child.color = 'red'
                 self.control.my_renders[self.name].display(do_render=True, do_sleep=True)
                 child.color = 'white'
 
             # swap nodes
-            temp = p.val
-            self.heap_array[self.parent_index(index)].val = child.val
-            self.heap_array[index].val = temp
+            temp = p.value
+            self.heap_array[self.parent_index(index)].value = child.value
+            self.heap_array[index].value = temp
 
             # move index down heap and
             # update pointers
@@ -817,7 +835,7 @@ class BinaryHeap(Tree):
         p_index = self.parent_index(index)
         p = self.heap_array[p_index]
 
-        while p.val > child.val:
+        while p.value > child.value:
             if change_color:
                 child.color = 'red'
                 self.control.my_renders[self.name].display(do_render=True, do_sleep=True)
