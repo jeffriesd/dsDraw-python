@@ -1,6 +1,6 @@
 # dsDraw
 
-dsDraw is an interactive tool for drawing data structures for educational purposes. It uses an embedded python shell for most operations. 
+dsDraw is an interactive tool for drawing data structures for educational purposes. It uses an embedded python shell as a command line interface for creating data structures.
 
 To display a data structure in the drawing area, create a new data structure variable e.g. `some_data_structure = BST(25)` and then enter the command `show some_data_structure`.
 If the drawing area is already occupied, the current active pane will be split along its longer axis to make room for the new pane.
