@@ -3,6 +3,7 @@ from datastructures.basic import InteractiveDataStructure
 from drawtools import dsDraw_colors
 from util.exceptions import InvalidCommandError
 
+
 class InteractiveArray(InteractiveDataStructure):
     def __init__(self, control, model, render):
         InteractiveDataStructure.__init__(self, control, model, render)
@@ -151,10 +152,93 @@ class InteractiveArray(InteractiveDataStructure):
         self._render._force_compress = not self._render._force_compress
         self._render.display()
 
+
 class InteractiveBST(InteractiveDataStructure):
     def __init__(self, control, model, render):
         InteractiveDataStructure.__init__(self, control, model, render)
 
+    def root(self):
+        return self._model.root
+
     def insert(self, value):
+        """
+        Insert new node into BST
+        """
         self._model.insert(value)
+        self._render.display()
+
+    def remove(self, value):
+        """
+        Remove node from BST
+        """
+        self._model.remove(value)
+        self._render.display()
+
+    def rotate(self, node_a, node_b):
+        """
+        Perform rotation of two nodes.
+        Determine if left, right, or neither possible.
+
+        rotate_right(self, node_a, node_b):
+            precondition: node_b is left child of node_a
+
+        rotate_left(self, node_a, node_b):
+            precondition: node_b is right child of node_a
+        """
+        if isinstance(node_a, int):
+            node_a = self._model.find(node_a)
+        if isinstance(node_b, int):
+            node_b = self._model.find(node_b)
+
+        # left rotation
+        if node_b is node_a.left:
+            self._model.rotate_right(node_a, node_b)
+        elif node_a is node_b.left:
+            self._model.rotate_right(node_b, node_a)
+        elif node_b is node_a.right:
+            self._model.rotate_left(node_a, node_b)
+        elif node_a is node_b.right:
+            self._model.rotate_left(node_b, node_a)
+        else:
+            raise InvalidCommandError("Cannot rotate unconnected nodes %s, %s" % node_a.value, node_b.value)
+
+        self._render.display()
+
+    def find(self, value):
+        """
+        Perform find operation on BST and return
+        the value.
+        """
+        tree_node = self._model.find(value, change_color=True)
+        return tree_node.value
+
+
+class InteractiveBinaryHeap(InteractiveDataStructure):
+
+    def __init__(self, control, model, render):
+        InteractiveDataStructure.__init__(self, control, model, render)
+
+    def insert(self, key):
+        """
+        Insert new key into heap
+        """
+        self._model.insert_key(key)
+        self._render.display()
+
+    def remove_min(self):
+        """
+        Return min value from heap
+        """
+        heap_node = self._model.remove_min()
+        self._render.display()
+        return heap_node.value
+
+    def decrease_key(self, heap_node, new_value):
+        """
+        Decrease key and sift down or up according to
+        heap property violations.
+        :param heap_node: reference to HeapNode
+        :param new_value: new value of HeapNode
+        """
+        self._model.decrease_key(heap_node, new_value)
         self._render.display()
