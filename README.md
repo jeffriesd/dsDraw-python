@@ -24,6 +24,8 @@ If the drawing area is already occupied, the current active pane will be split a
   #### Commands
   * swap(i, j) -- 
     Visually swaps the elements at indices i and j.
+  * color("c", i, j) --
+    Colors elements i to j (inclusive) with the specified color. Currently supports the following colors: red, pink, orange, yellow, green, light green, blue, light blue, purple.
     
    ### BST (Binary Search Tree)
    To create a new bst, provide
