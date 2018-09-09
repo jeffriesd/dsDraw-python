@@ -33,17 +33,17 @@ class VariableEnvironment(dict):
         any time it gets accessed.
         """
         # clone may not be implemented
-        try:
-            reference = self.variables[var_name]
-            if isinstance(reference, InteractiveDataStructure):
-                reference.add_state_to_history()
-        except NotImplementedError:
-            # clone not implemented,
-            # cant update history
-            pass
-        finally:
-            # append to recents list for redrawing
-            self.recently_touched.append(var_name)
+        # try:
+        #     reference = self.variables[var_name]
+        #     if isinstance(reference, InteractiveDataStructure):
+        #         reference.add_state_to_history()
+        # except NotImplementedError:
+        #     # clone not implemented,
+        #     # cant update history
+        #     pass
+        # finally:
+        #     # append to recents list for redrawing
+        #     self.recently_touched.append(var_name)
 
         return self.variables[var_name]
 

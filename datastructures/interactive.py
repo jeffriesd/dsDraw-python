@@ -1,5 +1,6 @@
 import time
 from datastructures.basic import InteractiveDataStructure
+from datastructures import tree
 from drawtools import dsDraw_colors
 from util.exceptions import InvalidCommandError
 
@@ -20,6 +21,7 @@ class InteractiveArray(InteractiveDataStructure):
         """
         Modify array
         """
+        self.add_state_to_history()
         self._model._array[index].value = value
         self._render.display()
 
@@ -34,10 +36,13 @@ class InteractiveArray(InteractiveDataStructure):
         If one index provided, color array[index]
         If two provided, color i to j, inclusive
         """
+
         try:
             color = dsDraw_colors[color_name]
         except KeyError:
             raise Exception("Invalid color '%s'" % color_name)
+
+        self.add_state_to_history()
 
         # if no indices provided, color entire array
         if len(indices) == 0:
@@ -68,6 +73,8 @@ class InteractiveArray(InteractiveDataStructure):
             raise InvalidCommandError("Index %s out of bounds" % i)
         if j < 0 or j >= self._model.size:
             raise InvalidCommandError("Index %s out of bounds" % j)
+
+        self.add_state_to_history()
 
         # require i < j
         if j < i:
@@ -164,6 +171,7 @@ class InteractiveBST(InteractiveDataStructure):
         """
         Insert new node into BST
         """
+        self.add_state_to_history()
         self._model.insert(value)
         self._render.display()
 
@@ -171,8 +179,17 @@ class InteractiveBST(InteractiveDataStructure):
         """
         Remove node from BST
         """
+        self.add_state_to_history()
         self._model.remove(value)
         self._render.display()
+
+    def find(self, value):
+        """
+        Perform find operation on BST and return
+        the value.
+        """
+        tree_node = self._model.find(value)
+        return tree_node
 
     def rotate(self, node_a, node_b):
         """
@@ -185,9 +202,10 @@ class InteractiveBST(InteractiveDataStructure):
         rotate_left(self, node_a, node_b):
             precondition: node_b is right child of node_a
         """
-        if isinstance(node_a, int):
+        self.add_state_to_history()
+        if not isinstance(node_a, tree.TreeNode):
             node_a = self._model.find(node_a)
-        if isinstance(node_b, int):
+        if not isinstance(node_b, tree.TreeNode):
             node_b = self._model.find(node_b)
 
         # left rotation
@@ -200,17 +218,9 @@ class InteractiveBST(InteractiveDataStructure):
         elif node_a is node_b.right:
             self._model.rotate_left(node_b, node_a)
         else:
-            raise InvalidCommandError("Cannot rotate unconnected nodes %s, %s" % node_a.value, node_b.value)
+            raise InvalidCommandError("Cannot rotate unconnected nodes %s, %s" % (node_a.value, node_b.value))
 
         self._render.display()
-
-    def find(self, value):
-        """
-        Perform find operation on BST and return
-        the value.
-        """
-        tree_node = self._model.find(value, change_color=True)
-        return tree_node.value
 
 
 class InteractiveBinaryHeap(InteractiveDataStructure):
@@ -222,6 +232,7 @@ class InteractiveBinaryHeap(InteractiveDataStructure):
         """
         Insert new key into heap
         """
+        self.add_state_to_history()
         self._model.insert_key(key)
         self._render.display()
 
@@ -229,6 +240,7 @@ class InteractiveBinaryHeap(InteractiveDataStructure):
         """
         Return min value from heap
         """
+        self.add_state_to_history()
         heap_node = self._model.remove_min()
         self._render.display()
         return heap_node.value
@@ -240,5 +252,6 @@ class InteractiveBinaryHeap(InteractiveDataStructure):
         :param heap_node: reference to HeapNode
         :param new_value: new value of HeapNode
         """
+        self.add_state_to_history()
         self._model.decrease_key(heap_node, new_value)
         self._render.display()
