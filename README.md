@@ -50,7 +50,7 @@ If the drawing area is already occupied, the current active pane will be split a
    * insert(k) -- insert new node with value k into tree
    * remove(k) -- remove node with value k from tree
    * find(k) -- returns tree node with value k
-   * rotate(a, b) -- perform a left/right rotation if nodes have child/parent relationship
+   * rotate(a, b) -- perform a left/right rotation if nodes have child/parent relationship. Note: a, b can be nodes or values.
    
    
    
