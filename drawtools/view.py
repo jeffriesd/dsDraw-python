@@ -275,6 +275,7 @@ class DrawCanvas(Canvas):
         return self.parent.get_annotation_mode()
 
 
+
 class CompositeCanvas(DrawCanvas):
     """
     Composite class to handle drawing multiple canvasses
@@ -287,6 +288,8 @@ class CompositeCanvas(DrawCanvas):
         self.parent = parent
         self.control = self.parent.control
         self.kwargs = kwargs
+
+        self.bind("<Control-z>", self.control.process_undo)
 
     def update(self):
         for name, c in self.children.items():
