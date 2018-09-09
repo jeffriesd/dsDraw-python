@@ -74,3 +74,8 @@ class InteractiveDataStructure(object):
     def add_state_to_history(self):
         current_state = self._model.clone()
         self._state_history.appendleft(current_state)
+
+    def revert_state(self):
+        previous_state = self._state_history.popleft()
+        self._model.set_state(previous_state)
+        self._render.display(do_render=True)
