@@ -6,7 +6,7 @@ from drawtools.render import RenderGraph
 
 class GraphNode(object):
     def __init__(self, value, x=0, y=0):
-        self.val = value
+        self.value = value
         self.x = x
         self.y = y
 
@@ -20,11 +20,9 @@ class GraphNode(object):
         self.color = "white"
 
     def __repr__(self):
-        return "GraphNode(%s)" % self.val
-
+        return "GraphNode(%s)" % self.value
     def __int__(self):
-        return self.val
-
+        return self.value
 
 class Graph(DataStructure):
     def __init__(self, prebuild_size = 0, name=None):
@@ -125,7 +123,7 @@ class Graph(DataStructure):
 
     def find(self, value, change_color=False):
         try:
-            same_val = list(filter(lambda n: n.val == value, self.nodes))
+            same_val = list(filter(lambda n: n.value == value, self.nodes))
             return same_val[0]
         except IndexError:
             return None
