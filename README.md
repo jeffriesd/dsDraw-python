@@ -1,6 +1,6 @@
 # dsDraw
 
-dsDraw is an interactive tool for drawing data structures for educational purposes. It uses an embedded python shell as a command line interface for creating data structures.
+dsDraw is an interactive tool for drawing data structures for educational purposes. It uses an embedded python shell as a command line interface for creating data structures. 
 
 To display a data structure in the drawing area, create a new data structure variable e.g. `some_data_structure = BST(25)` and then enter the command `show some_data_structure`.
 If the drawing area is already occupied, the current active pane will be split along its longer axis to make room for the new data structure.
@@ -33,7 +33,7 @@ If the drawing area is already occupied, the current active pane will be split a
   * compress() -- toggles forced compression. If the array is already compressed because of its size, this won't do anything.
     
    ### BST (Binary Search Tree)
-   Binary search trees are drawn to fill their canvas.
+   Vanilla unbalanced binary search tree. Nodes are positioned on the canvas to minimize horizontal space using the Reingold-Tilford algorithm.
    
    To create a new BST, provide the number of elements the tree should have and it will be filled with values 
    from 0 to n-1
@@ -51,6 +51,41 @@ If the drawing area is already occupied, the current active pane will be split a
    * remove(k) -- remove node with value k from tree
    * find(k) -- returns tree node with value k
    * rotate(a, b) -- perform a left/right rotation if nodes have child/parent relationship. Note: a, b can be nodes or values.
+   
+   ### BinaryHeap
+   BinaryHeap is implemented as a min-heap stored in an array. Heaps are drawn identically to trees.
+   
+   To create a new heap, provide the number of elements the heap should have and it will be filled with values 
+   from 0 to n-1
+   ```python
+   b = BinaryHeap(5)
+   ```
+   or provide no args for an empty heap.
+   ```python
+   empty = BinaryHeap()
+   ```
+   
+   #### Commands
+   * insert(k) -- insert a node with value k into heap
+   * remove_min() -- return the value of the 
+   * decrease_key(heap_node, v) -- set the node object's value to v and sift down
+   
+   ### Graph
+   Graphs are drawn using the spring-force model. Connected nodes are attracted to each other 
+   by a linear spring force and all nodes repel each other by an inverse square repulsion force.
+   
+   To create a Graph, provide an integer k for a complete graph of size k.
+   ```python
+   g = Graph(5)
+   ```
+   or provide no args for an empty graph.
+   ```python
+   g = Graph()
+   ```
+   
+   #### Commands
+   * new_node(k) -- add a new node of degree 0 with value k
+   * 
    
    
    
