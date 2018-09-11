@@ -91,10 +91,12 @@ class TextBox(Text):
     def delete_annotation(self):
         self.destroy()
 
+
 class ArrowPoint(object):
     def __init__(self, x, y):
         self.x = x
         self.y = y
+
 
 class Arrow(object):
     def __init__(self, parent, x_0, y_0, x_1, y_1, **kwargs):
@@ -250,6 +252,7 @@ class Annotator(object):
         """
         self.canvas = canvas
         # add bindings for annotating canvas by clicking
+        self.canvas.bind("<Button-1>", self.canvas_clicked)
         self.canvas.bind("<B1-Motion>", self.canvas_mouse_hold)
         self.canvas.bind("<ButtonRelease-1>", self.canvas_mouse_released)
 
