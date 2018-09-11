@@ -115,7 +115,7 @@ class DrawControl:
 
     def clear_log(self):
         """Open log and immediately close stream to empty file contents"""
-        with open('../logs/control_log.log', 'w'):
+        with open('./logs/control_log.log', 'w'):
             pass
 
     def parse_command(self, command_text):
@@ -302,21 +302,3 @@ class DrawControl:
         for _, render in self.my_renders.items():
             render.display(do_render, do_sleep)
 
-
-def main():
-    # function from screeninfo library to
-    # get screen dimensions
-    # dim = get_monitors()[0]
-    # width = dim.width
-    # height = dim.height
-
-    root = Tk()
-
-    width = root.winfo_screenwidth()
-    height = root.winfo_screenheight()
-
-    d = DrawControl(root, width, height)
-    d.view.mainloop()
-
-if __name__ == '__main__':
-    main()

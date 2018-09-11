@@ -393,7 +393,7 @@ class DrawApp(tk.Frame):
         self.logger.info("\n\n\t----- new run -----\n")
 
     def clear_log(self):
-        with open("../logs/view_log.log", "w"):
+        with open("./logs/view_log.log", "w"):
             pass
 
     def on_resize(self, event):
