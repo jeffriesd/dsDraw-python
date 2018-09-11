@@ -70,6 +70,7 @@ class EmbeddedShell(InteractiveConsole):
 
         self.runcode("from datastructures.arrays import *")
         self.runcode("from datastructures.tree import BST, BinaryHeap")
+        self.runcode("from datastructures.graph import Graph")
 
     def runcode(self, code):
         # reset list of recently touched data structures
