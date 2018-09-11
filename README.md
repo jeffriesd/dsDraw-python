@@ -85,7 +85,7 @@ If the drawing area is already occupied, the current active pane will be split a
    
    #### Commands
    * new_node(k) -- add a new node of degree 0 with value k
-   * 
+   * connect(i, j) -- create an edge between nodes i and j. Note: i and j can be nodes or values.
    
    
    
