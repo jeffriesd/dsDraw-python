@@ -141,7 +141,6 @@ class ShowRenderCommand(DSCommand):
     def execute(self):
         self.receiver.add_model_to_view(self.model_name)
 
-
     def undo(self):
         close_cmd = CloseRenderCommand(self.receiver, self.model_name, self.should_redraw)
         close_cmd.execute()
@@ -174,6 +173,10 @@ class CloseRenderCommand(DSCommand):
             self.receiver.my_renders.pop(name)
             self.receiver.view.canvas.get_child(name).destroy()
 
+            # delete interactive object and reassign model to model_name
+            self.receiver.my_variables[name] = self.receiver.my_variables["_" + name]
+            del self.receiver.my_variables["_" + name]
+
         for name in renders:
             self.receiver.add_model_to_view(name)
 
@@ -183,6 +186,7 @@ class CloseRenderCommand(DSCommand):
         # delete interactive object and reassign model to model_name
         self.receiver.my_variables[self.model_name] = self.receiver.my_variables["_" + self.model_name]
         del self.receiver.my_variables["_" + self.model_name]
+
 
     def undo(self):
         self.receiver.add_model_to_view(self.model_name)
