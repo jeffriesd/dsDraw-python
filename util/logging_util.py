@@ -32,7 +32,7 @@ def create_logger(name, level, fh_name, fh_level=None,
     # if no handler level supplied, use same as logger level
     fh_level = level if fh_level is None else fh_level
 
-    handler = logging.FileHandler(fh_name)
+    handler = logging.FileHandler("dsDraw/" + fh_name)
     handler.setLevel(to_level(fh_level))
 
     formatter = logging.Formatter(format)
