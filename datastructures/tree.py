@@ -6,7 +6,8 @@ from drawtools.render import RenderTree
 import random
 from copy import copy
 from datastructures.basic import DataStructure
-from datastructures.interactive import InteractiveBST, InteractiveBinaryHeap
+import datastructures.interactive
+
 
 class TreeNode(object):
     def __init__(self, value, parent=None):
@@ -48,16 +49,20 @@ class TreeNode(object):
         self.color = "white"
 
     def __repr__(self):
-        return "Node(%s)" % self.value
+        return "TreeNode(%s)" % self.value
 
     def __lt__(self, other):
         return self.value < other.value
+
     def __gt__(self, other):
         return self.value > other.value
+
     def __le__(self, other):
         return self.value <= other.value
+
     def __ge__(self, other):
         return self.value >= other.value
+
     def __iter__(self):
         """Inorder traversal"""
         if self.left_child():
@@ -312,7 +317,7 @@ class BST(Tree):
         return BSTCommandFactory(self)
 
     def get_interactive_class(self):
-        return InteractiveBST
+        return datastructures.interactive.InteractiveBST
 
     def insert(self, el, change_color=False):
         """
@@ -320,7 +325,7 @@ class BST(Tree):
         :param el: element being inserted
         :param change_color: shows traversal of tree for visual purposes
         """
-        self.log("info", "calling wrapper insert func with root %s to insert %i" % (self.root, el))
+        self.log("info", "calling wrapper insert func with root %s to insert %s" % (self.root, el))
         if self.root:
             self.root = self._insert(self.root, el, change_color)
         else:
@@ -335,23 +340,23 @@ class BST(Tree):
         :param change_color: shows traversal of tree for visual purposes
         """
 
-        self.log("debug", "inserting %i; current node is %s" % (el, cur_node))
+        self.log("debug", "inserting %s; current node is %s" % (el, cur_node))
 
         # change color to show traversal of tree
-        if change_color:
-            cur_node.color = 'red'
-            self.control.my_renders[self.name].display(do_render=False, do_sleep=True)
-            cur_node.color = 'white'
+        # if change_color:
+        #     cur_node.color = 'red'
+        #     self.control.my_renders[self.name].display(do_render=False, do_sleep=True)
+        #     cur_node.color = 'white'
 
         if el <= cur_node.value:
-            self.log("debug", "%i <= %i; going left" % (el, cur_node.value))
+            self.log("debug", "%s <= %s; going left" % (el, cur_node.value))
             if cur_node.left:
                 cur_node.left = self._insert(cur_node.left, el, change_color)
             else:
                 self.log("debug", "new leaf (%s)" % (el))
                 cur_node.left = TreeNode(el, parent=cur_node)
         else:
-            self.log("debug", "%i > %i; going right" % (el, cur_node.value))
+            self.log("debug", "%s > %s; going right" % (el, cur_node.value))
             if cur_node.right:
                 cur_node.right = self._insert(cur_node.right, el, change_color)
             else:
@@ -365,7 +370,7 @@ class BST(Tree):
 
     def remove(self, el, change_color=False):
         """Wrapper method for recursive remove method"""
-        self.log("info", "calling wrapper remove func with root %s to remove %i" % (self.root, el))
+        self.log("info", "calling wrapper remove func with root %s to remove %s" % (self.root, el))
 
         if self.find(el, change_color=False):
             # if tree has exactly one node
@@ -388,10 +393,10 @@ class BST(Tree):
             return cur_node
 
         # change color of current node to show traversal of tree
-        if change_color:
-            cur_node.color = 'red'
-            self.control.my_renders[self.name].display(do_render=False, do_sleep=True)
-            cur_node.color = 'white'
+        # if change_color:
+        #     cur_node.color = 'red'
+        #     self.control.my_renders[self.name].display(do_render=False, do_sleep=True)
+        #     cur_node.color = 'white'
 
         if el == cur_node.value:
             if cur_node.left is None:
@@ -425,10 +430,10 @@ class BST(Tree):
             return
 
         # change color of current node to show traversal of tree
-        if change_color:
-            cur_node.color = 'red'
-            self.control.my_renders[self.name].display(do_render=False, do_sleep=True)
-            cur_node.color = 'white'
+        # if change_color:
+        #     cur_node.color = 'red'
+        #     self.control.my_renders[self.name].display(do_render=False, do_sleep=True)
+        #     cur_node.color = 'white'
 
         if el == cur_node.value:
             # case 1
@@ -482,14 +487,14 @@ class BST(Tree):
 
     def _find(self, cur_node, el, change_color):
         """Standard recursive find method O(logn)"""
-        # if cur_node is None:
-        #     return None
+        if cur_node is None:
+            return None
 
         # change color of current node to show traversal of tree
-        if change_color:
-            cur_node.color = "red"
-            self.control.my_renders[self.name].display(do_render=False, do_sleep=True)
-            cur_node.color = "white"
+        # if change_color:
+        #     cur_node.color = "red"
+        #     self.control.my_renders[self.name].display(do_render=False, do_sleep=True)
+        #     cur_node.color = "white"
 
         if cur_node.value == el:
             return cur_node
@@ -644,8 +649,10 @@ class BinaryHeap(Tree):
             prebuild_size = int(prebuild_size)
             numbers = list(range(prebuild_size))
             random.shuffle(numbers)
-            for n in numbers[:prebuild_size//2]:
+            for n in numbers:
                 self.insert_key(n)
+
+
     @property
     def root(self):
         try:
@@ -686,15 +693,15 @@ class BinaryHeap(Tree):
         return BinaryHeapCommandFactory(self)
 
     def get_interactive_class(self):
-        return InteractiveBinaryHeap
+        return datastructures.interactive.InteractiveBinaryHeap
 
     def find(self, key, change_color=False):
         """Linear search by node value"""
         for node in self.heap_array:
-            if change_color:
-                node.color = 'red'
-                self.control.my_renders[self.name].display(do_render=True, do_sleep=True)
-                node.color = 'white'
+            # if change_color:
+            #     node.color = 'red'
+            #     self.control.my_renders[self.name].display(do_render=True, do_sleep=True)
+            #     node.color = 'white'
             if node.value == key:
                 return node
         return None
@@ -799,10 +806,10 @@ class BinaryHeap(Tree):
             index = self.right_index(index)
 
         while p.value > child.value:
-            if change_color:
-                child.color = 'red'
-                self.control.my_renders[self.name].display(do_render=True, do_sleep=True)
-                child.color = 'white'
+            # if change_color:
+            #     child.color = 'red'
+            #     self.control.my_renders[self.name].display(do_render=True, do_sleep=True)
+            #     child.color = 'white'
 
             # swap nodes
             temp = p.value
@@ -836,10 +843,10 @@ class BinaryHeap(Tree):
         p = self.heap_array[p_index]
 
         while p.value > child.value:
-            if change_color:
-                child.color = 'red'
-                self.control.my_renders[self.name].display(do_render=True, do_sleep=True)
-                child.color = 'white'
+            # if change_color:
+            #     child.color = 'red'
+            #     self.control.my_renders[self.name].display(do_render=True, do_sleep=True)
+            #     child.color = 'white'
 
             # swap nodes
             temp = p
