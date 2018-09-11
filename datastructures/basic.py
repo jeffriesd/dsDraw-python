@@ -19,7 +19,7 @@ class DataStructure(object):
         self.logger.setLevel(logging.INFO)
 
     def clear_log(self):
-        with open('../logs/model_log.log', 'w') as _:
+        with open('./logs/model_log.log', 'w') as _:
             pass
 
     def log(self, level_str, message, indent=0):

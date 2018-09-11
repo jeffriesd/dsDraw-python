@@ -275,7 +275,6 @@ class DrawCanvas(Canvas):
         return self.parent.get_annotation_mode()
 
 
-
 class CompositeCanvas(DrawCanvas):
     """
     Composite class to handle drawing multiple canvasses
@@ -319,7 +318,6 @@ class CompositeCanvas(DrawCanvas):
         else:
             new_canvas.place(relx=0, rely=0,
                              relwidth=1, relheight=1)
-
 
         return new_canvas
 
