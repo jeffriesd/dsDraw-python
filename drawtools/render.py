@@ -22,7 +22,6 @@ class RenderObject(object):
             if id not in self.canvas.annotator.annotation_ids:
                 self.canvas.delete(id)
 
-
 class RenderTree(RenderObject):
     """
     Wrapper class to handle rendering algorithm (coordinate placement),
@@ -620,7 +619,7 @@ class RenderGraph(RenderObject):
 
         return a_x, a_y
 
-    def render(self, iterations=250):
+    def render(self, iterations=150):
         """
         Determine coordinates of nodes
         for placement on canvas
