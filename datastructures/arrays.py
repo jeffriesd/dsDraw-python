@@ -1,10 +1,6 @@
 from datastructures.basic import DataStructure
 from drawtools.render import RenderArray
-from drawtools import dsDraw_colors
-from datastructures.basic import InteractiveDataStructure
-from datastructures.interactive import InteractiveArray
-from util.exceptions import InvalidCommandError
-import time
+import datastructures.interactive
 import random
 
 
@@ -73,6 +69,6 @@ class Array(DataStructure):
         return RenderArray
 
     def get_interactive_class(self):
-        return InteractiveArray
+        return datastructures.interactive.InteractiveArray
 
 
