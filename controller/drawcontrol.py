@@ -61,7 +61,6 @@ class DrawControl:
             raise Exception("Model '%s' already assigned to a render object" % model_name)
 
         my_model = self.my_variables[model_name]
-        my_model.set_control(self)
         my_model.set_name(model_name)
         my_model.set_logger(self.model_logger)
 
@@ -73,6 +72,7 @@ class DrawControl:
         def click_binding(event):
             new_canvas.annotator.canvas_clicked(event)
             self.give_focus(model_name)
+
             # composite canvas gets keyboard focus when
             # any child canvas clicked
             new_canvas.parent.focus_set()
@@ -265,8 +265,6 @@ class DrawControl:
         active_render = self.get_focused()
         # name access causes new state to be saved
         interactive_obj = self.my_variables[active_render.name]
-        # removing state that was just created
-        interactive_obj._state_history.popleft()
 
         try:
             interactive_obj.revert_state()
