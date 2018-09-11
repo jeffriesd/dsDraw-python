@@ -9,10 +9,6 @@ class DataStructure(object):
     def set_name(self, name):
         self.name = name
 
-    def set_control(self, control):
-        """Sets reference for control object"""
-        self.control = control
-
     def set_logger(self, logger):
         self.logger = logger
         self.clear_log()
@@ -69,13 +65,20 @@ class InteractiveDataStructure(object):
         self._control = control
         self._model = model
         self._render = render
-        self._state_history = deque(maxlen=10)
+        self._state_history = deque(maxlen=50)
 
-    def add_state_to_history(self):
+    def save_state(self):
+        """
+        Add current state to history deque
+        """
         current_state = self._model.clone()
         self._state_history.appendleft(current_state)
 
     def revert_state(self):
+        """
+        Pop most recent state from history deque
+        and redraw canvas.
+        """
         previous_state = self._state_history.popleft()
         self._model.set_state(previous_state)
         self._render.display(do_render=True)
