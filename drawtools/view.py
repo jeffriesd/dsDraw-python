@@ -289,7 +289,6 @@ class CompositeCanvas(DrawCanvas):
         self.control = self.parent.control
         self.kwargs = kwargs
 
-
     def update(self):
         for name, c in self.children.items():
             c.update()
