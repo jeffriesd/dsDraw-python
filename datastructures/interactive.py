@@ -1,6 +1,7 @@
 import time
 from datastructures.basic import InteractiveDataStructure
 from datastructures import tree
+from datastructures import graph
 from drawtools import dsDraw_colors
 from util.exceptions import InvalidCommandError
 
@@ -21,7 +22,7 @@ class InteractiveArray(InteractiveDataStructure):
         """
         Modify array
         """
-        self.add_state_to_history()
+        self.save_state()
         self._model._array[index].value = value
         self._render.display()
 
@@ -42,7 +43,7 @@ class InteractiveArray(InteractiveDataStructure):
         except KeyError:
             raise Exception("Invalid color '%s'" % color_name)
 
-        self.add_state_to_history()
+        self.save_state()
 
         # if no indices provided, color entire array
         if len(indices) == 0:
@@ -74,7 +75,7 @@ class InteractiveArray(InteractiveDataStructure):
         if j < 0 or j >= self._model.size:
             raise InvalidCommandError("Index %s out of bounds" % j)
 
-        self.add_state_to_history()
+        self.save_state()
 
         # require i < j
         if j < i:
@@ -171,7 +172,7 @@ class InteractiveBST(InteractiveDataStructure):
         """
         Insert new node into BST
         """
-        self.add_state_to_history()
+        self.save_state()
         self._model.insert(value)
         self._render.display()
 
@@ -179,7 +180,7 @@ class InteractiveBST(InteractiveDataStructure):
         """
         Remove node from BST
         """
-        self.add_state_to_history()
+        self.save_state()
         self._model.remove(value)
         self._render.display()
 
@@ -202,11 +203,19 @@ class InteractiveBST(InteractiveDataStructure):
         rotate_left(self, node_a, node_b):
             precondition: node_b is right child of node_a
         """
-        self.add_state_to_history()
+        a = node_a
+        b = node_b
         if not isinstance(node_a, tree.TreeNode):
             node_a = self._model.find(node_a)
         if not isinstance(node_b, tree.TreeNode):
             node_b = self._model.find(node_b)
+
+        if node_a is None:
+            raise InvalidCommandError("'%s' not present in tree" % a)
+        if node_b is None:
+            raise InvalidCommandError("'%s' not present in tree" % b)
+
+        self.save_state()
 
         # left rotation
         if node_b is node_a.left:
@@ -232,7 +241,7 @@ class InteractiveBinaryHeap(InteractiveDataStructure):
         """
         Insert new key into heap
         """
-        self.add_state_to_history()
+        self.save_state()
         self._model.insert_key(key)
         self._render.display()
 
@@ -240,7 +249,7 @@ class InteractiveBinaryHeap(InteractiveDataStructure):
         """
         Return min value from heap
         """
-        self.add_state_to_history()
+        self.save_state()
         heap_node = self._model.remove_min()
         self._render.display()
         return heap_node.value
@@ -252,6 +261,39 @@ class InteractiveBinaryHeap(InteractiveDataStructure):
         :param heap_node: reference to HeapNode
         :param new_value: new value of HeapNode
         """
-        self.add_state_to_history()
+        if new_value > heap_node.value:
+            raise InvalidCommandError("Cannot decrease to key greater than %s" % heap_node.value)
+        self.save_state()
         self._model.decrease_key(heap_node, new_value)
         self._render.display()
+
+
+class InteractiveGraph(InteractiveDataStructure):
+    def __init__(self, control, model, render):
+        InteractiveDataStructure.__init__(self, control, model, render)
+
+    def new_node(self, value):
+        """
+        Add a new node with degree 0.
+        """
+        self.save_state()
+        self._model.new_node(value)
+        self._render.display()
+
+    def connect(self, a, b):
+        if not isinstance(a, graph.GraphNode):
+            a = self._model.find(a)
+        if not isinstance(b, graph.GraphNode):
+            b = self._model.find(b)
+
+        if (a, b) in self._model.edges or (b, a) in self._model.edges:
+            raise InvalidCommandError("'%s' and '%s' already connected" % (a, b))
+        if a is None:
+            pass
+
+        self.save_state()
+
+        self._model.create_edge(a, b)
+
+        self._render.display()
+
