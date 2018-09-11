@@ -5,9 +5,9 @@ dsDraw_colors = {"red": "#e74c3c",
                  "orange": "#f39c12",
                  "yellow": "#f7dc6f",
                  "green": "#52be80",
-                 "lightgreen": "#82e0aa",
+                 "light green": "#82e0aa",
                  "blue": "#2e86c1",
-                 "lightblue": "#5dade2",
+                 "light blue": "#5dade2",
                  "purple": "#a569bd"}
 
 def default_font():
