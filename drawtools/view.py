@@ -289,7 +289,6 @@ class CompositeCanvas(DrawCanvas):
         self.control = self.parent.control
         self.kwargs = kwargs
 
-        self.bind("<Control-z>", self.control.process_undo)
 
     def update(self):
         for name, c in self.children.items():
@@ -321,6 +320,7 @@ class CompositeCanvas(DrawCanvas):
         else:
             new_canvas.place(relx=0, rely=0,
                              relwidth=1, relheight=1)
+
 
         return new_canvas
 
@@ -426,8 +426,6 @@ class DrawApp(tk.Frame):
         self.console_input.bind("<Up>", self.console.previous_command)
         self.console_input.bind("<Down>", self.console.next_command)
         self.console_input.bind("<Control-c>", self.console.clear_input)
-        # bind Ctrl z to undo action
-        self.console_input.bind("<Control-z>", self.control.process_undo)
 
         self.canvas = CompositeCanvas(self, highlightthickness=1, highlightbackground="black", bg="#ccc")
         # setting canvas to fill right side of screen -
@@ -454,9 +452,10 @@ class DrawApp(tk.Frame):
         self.bind("<Button-1>", lambda ev: self.focus_set())
 
         # toggle console while console has focus or root window has focus
-        self.bind("<Control-t>", self.toggle_console)
-        self.console_input.bind("<Control-t>", self.toggle_console)
+        self.bind_all("<Control-t>", self.toggle_console)
 
+        # undo with Control-z
+        self.bind_all("<Control-z>", self.control.process_undo)
 
     def clear_canvas(self):
         self.canvas.delete("all")
