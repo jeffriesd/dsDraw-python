@@ -2,6 +2,7 @@ import random
 from command.command_factory import GraphCommandFactory
 from datastructures.basic import DataStructure
 from drawtools.render import RenderGraph
+import datastructures.interactive
 
 
 class GraphNode(object):
@@ -33,31 +34,15 @@ class Graph(DataStructure):
 
         if prebuild_size:
 
-            # def build_tree(size):
-            #     for i in range(size):
-            #         if i == 0:
-            #             self.nodes.append(GraphNode(i))
-            #         else:
-            #             parent = self.nodes[i // 2]
-            #             self.add_node(parent, i)
-            # build_tree(int(prebuild_size))
             og = GraphNode(-11)
             self.nodes.append(og)
             for i in range(int(prebuild_size)):
-            #     # from_value = random.choice(self.nodes)
-            #     # from_value = self.nodes[-1]
-            #     # new = self.add_node(from_value, i)
-                new = self.add_node(og, i)
-            #     #
+                new = self.new_node(i)
+
                 # # fully connected
                 for v in self.nodes:
-                # rn = random.randint(0, len(self.nodes))
-                # for v in random.sample(self.nodes, rn):
                     if v is not new:
                         self.create_edge(v, new)
-
-                # create ring
-            # self.create_edge(self.nodes[0],self.nodes[-1])
 
     def __repr__(self):
         return "Graph structure with %s nodes" % len(self.nodes)
@@ -65,11 +50,30 @@ class Graph(DataStructure):
     def __iter__(self):
         return iter(self.nodes)
 
+    def clone(self):
+        """
+        Deep copy graph by copying
+        node values and coordinates
+        :return:
+        """
+        clone = Graph()
+        for node in self.nodes:
+            clone.nodes.append(GraphNode(value=node.value, x=node.x, y=node.y))
+
+        for u, v in self.edges:
+            u_clone = clone.find(u.value)
+            v_clone = clone.find(v.value)
+            clone.create_edge(u_clone, v_clone)
+
+
     def get_command_factory(self):
         return GraphCommandFactory(self)
 
     def get_render_class(self):
         return RenderGraph
+
+    def get_interactive_class(self):
+        return datastructures.interactive.InteractiveGraph
 
     def add_node(self, from_node, value):
         """
