@@ -36,7 +36,7 @@ class TextBox(Text):
 
         # creating uniform border
         self.configure(highlightthickness=1)
-        self.configure(highlightbackground="black")
+        self.configure(highlightbackground=TEXTBOX_BORDER)
         self.configure(borderwidth=0)
 
         self.width = (x_1 - x_0)
@@ -378,19 +378,27 @@ class Annotator(object):
     def canvas_mouse_released(self, event):
         current_mode = self.get_annotation_mode()
 
+        # TODO refactor as annotation factory
+
         # create a new annotation object
         if current_mode == "text":
             self.canvas.delete(self.new_text_rect_id)
 
+            # tkinter requires x1 < x2, y1 < y2
+            x1, x2 = sorted((self.start_x, event.x))
+            y1, y2 = sorted((self.start_y, event.y))
+
             # dont allow text boxes smaller than 25x25 pixels
             if abs(self.start_x - event.x) > 25 and abs(self.start_y - event.y) > 25:
-                new_textbox = TextBox(self.canvas, self.start_x, self.start_y,
-                                       event.x, event.y, bg=TEXTBOX_BG)
+                new_textbox = TextBox(self.canvas, x1, y1, x2, y2, bg=TEXTBOX_BG)
 
         elif current_mode == "arrow":
             self.canvas.delete(self.new_arrow_id)
-            new_arrow = Arrow(self, self.canvas, self.start_x, self.start_y, event.x, event.y,
-                              fill="black", width=4)
+
+            # dont allow arrow smaller than 25x25 pixels in both directions
+            if abs(self.start_x - event.x) > 25 or abs(self.start_y - event.y) > 25:
+                new_arrow = Arrow(self, self.canvas, self.start_x, self.start_y, event.x, event.y,
+                                  fill=ARROW_FILL, width=4)
 
     def get_annotation_mode(self):
         """
