@@ -3,6 +3,7 @@ from util.my_threads import GraphSimThread
 from time import sleep
 from drawtools import default_font
 import random
+from drawtools.colors import *
 
 
 class RenderObject(object):
@@ -18,8 +19,9 @@ class RenderObject(object):
         """
         Only delete items created by render object/data structure.
         """
+
         for id in self.canvas.find_all():
-            if id not in self.canvas.annotator.annotation_ids:
+            if "annotation" not in self.canvas.gettags(id):
                 self.canvas.delete(id)
 
 class RenderTree(RenderObject):
@@ -788,7 +790,7 @@ class RenderArray(RenderObject):
             truncated_x_1 = truncated_x_0 + self.cell_w * 2
             truncated_y_1 = truncated_y_0 + self.cell_h
             tr = self.canvas.create_rectangle(truncated_x_0, truncated_y_0,
-                                         truncated_x_1, truncated_y_1, fill="white")
+                                         truncated_x_1, truncated_y_1, fill=NODE_COLOR)
             # draw ... in array and for indices
             if not self._hide_values:
                 tr1 = self.canvas.create_text(truncated_x_0 + self.cell_w, truncated_y_0 + self.cell_h/2,

@@ -1,5 +1,6 @@
 from tkinter import Canvas, Entry, Text, WORD, LAST
 from drawtools import default_font
+from drawtools.colors import *
 
 
 class TextBox(Text):
@@ -99,27 +100,68 @@ class ArrowPoint(object):
 
 
 class Arrow(object):
-    def __init__(self, parent, x_0, y_0, x_1, y_1, **kwargs):
+    def __init__(self, annotator, parent, x_0, y_0, x_1, y_1, width,**kwargs):
         self.parent = parent
-        self.kwargs = kwargs
+        self.annotator = annotator
+
+        # register self with annotator object for showing
+        # annotation menus
+        unique_id = self.annotator.register_annotation_object(self)
+        unique_tag = "_Arrow_" + str(unique_id)
+        self.tags = ["annotation", unique_tag]
 
         # temporary line should be gray
         self.temp_kwargs = {k: v for k, v in kwargs.items()}
         self.temp_kwargs["fill"] = "gray"
 
+        # set default kwargs
+        self.kwargs = kwargs
+        self.kwargs["smooth"] = True
+        self.kwargs["arrow"] = LAST
+        self.kwargs["tags"] = self.tags
+
+        # configurable-by-menu attributes
+        self.width = width
+        self.dash = None
+
         self.p_1 = ArrowPoint(x_0, y_0)
         self.p_2 = ArrowPoint((x_1 + x_0) / 2, (y_1 + y_0) / 2)
         self.p_3 = ArrowPoint(x_1, y_1)
 
-        # save id for moving
-        self.tk_id = self.parent.create_line(self.p_1.x, self.p_1.y, self.p_2.x, self.p_2.y,
-                                             self.p_3.x, self.p_3.y, smooth=True, arrow=LAST, **kwargs)
-
         self.straight = True
 
+        self.tk_id = None
         self.temp_id = None
 
+        self.create_arrow()
+
+    def create_arrow(self):
+        """
+        Encapsulate drawing arrow , assigning self.tk_id
+        and binding events
+        :return:
+        """
+        self.parent.delete(self.tk_id)
+        if self.straight:
+            self.tk_id = self.parent.create_line(self.p_1.x, self.p_1.y,
+                                                 self.p_3.x, self.p_3.y,
+                                                 dash=self.dash, width=self.width,
+                                                 **self.kwargs)
+        else:
+            self.tk_id = self.parent.create_line(self.p_1.x, self.p_1.y, self.p_2.x, self.p_2.y,
+                                                 self.p_3.x, self.p_3.y,
+                                                 dash=self.dash, width=self.width,
+                                                 **self.kwargs)
+
+            self.straight = self.is_straight()
         self.bind_events()
+
+    def get_attributes(self):
+        """
+        Get relevant attributes for menu
+        """
+        dash = "dash" if self.dash else "solid"
+        return {"width": self.width, "dash": dash}
 
     def delete_annotation(self):
         self.parent.delete(self.tk_id)
@@ -166,11 +208,13 @@ class Arrow(object):
             if not self.straight or self.moving_point is self.p_2:
                 self.temp_id = self.parent.create_line(self.p_1.x, self.p_1.y, self.p_2.x, self.p_2.y,
                                                        self.p_3.x, self.p_3.y, smooth=True, arrow=LAST,
-                                                       **self.temp_kwargs)
+                                                       tags=self.tags, **self.temp_kwargs)
                 self.straight = self.is_straight()
             elif self.straight:
                 self.temp_id = self.parent.create_line(self.p_1.x, self.p_1.y,
-                                        self.p_3.x, self.p_3.y, smooth=False, arrow=LAST, **self.temp_kwargs)
+                                                        self.p_3.x, self.p_3.y, smooth=False, arrow=LAST,
+                                                        tags=self.tags, **self.temp_kwargs)
+
 
     def release_point(self, event):
         """
@@ -180,22 +224,8 @@ class Arrow(object):
         self.parent.delete(self.temp_id)
         # delete original arrow
         self.parent.delete(self.tk_id)
-        # remove original arrow id from annotations set
-        self.parent.annotator.annotation_ids.remove(self.tk_id)
 
-
-        # redraw updated line
-        if self.straight:
-            self.tk_id = self.parent.create_line(self.p_1.x, self.p_1.y,
-                                             self.p_3.x, self.p_3.y, smooth=True, arrow=LAST, **self.kwargs)
-        else:
-            self.tk_id = self.parent.create_line(self.p_1.x, self.p_1.y, self.p_2.x, self.p_2.y,
-                                                 self.p_3.x, self.p_3.y, smooth=True, arrow=LAST, **self.kwargs)
-
-        self.bind_events()
-
-        # replace tk_id in parent canvas.annotator.annotation_ids
-        self.parent.annotator.annotation_ids.add(self.tk_id)
+        self.create_arrow()
 
     def translate_arrow(self, event):
         """Move arrow by dragging"""
@@ -209,7 +239,6 @@ class Arrow(object):
 
         # update points
         self.update_points(dx, dy)
-
 
     def update_points(self, dx, dy):
         """
@@ -262,19 +291,74 @@ class Annotator(object):
         self.start_x = 0
         self.start_y = 0
 
-        # keep track of annotation ids so they
-        # don't get removed on clear_canvas()
-        self.annotation_ids = set()
+        # keep references to all annotation objects
+        # for showing option menus.
+        # Keys are numbers generated uniquely
+        # each time an object is added
+        self.annotation_objects = {}
+
+    def register_annotation_object(self, ann_obj):
+        """
+        Add a new mapping from unique id to annotation object.
+        :param ann_obj: some Arrow or Textbox
+        :return new_id for tkinter tagging
+        """
+        if self.annotation_objects:
+            # choose next available id
+            new_id = max(self.annotation_objects) + 1
+        else:
+            # empty dict
+            new_id = 0
+
+        self.annotation_objects[new_id] = ann_obj
+        return new_id
 
     def canvas_clicked(self, event):
         """
-        Left-click pushed somewhere on canvas
+        Left-click pushed somewhere on canvas.
+        check whether annotation is being clicked and bring up menu.
         """
         self.start_x = event.x
         self.start_y = event.y
 
-        # remove focus from any focused annotations
+        # remove focus from any focused text box
         self.canvas.master.master.focus()
+
+        # determine whether an annotation object is being clicked
+        ann_obj = self.canvas.find_withtag("current&&annotation")
+
+        # use hack to get main Frame reference and update
+        # menu
+        main_view = self.canvas.get_root_canvas().parent
+        annotation_menu = main_view.annotation_menu
+
+        # if clicking an annotation object,
+        # bring up its menu
+        if ann_obj:
+            # convert tuple to scalar
+            tk_id = ann_obj[0]
+            obj_tags = self.canvas.gettags(tk_id)
+
+            # determine class and annotation ID (not tkinter id)
+            # # note: annotation id tags start with "_"
+            ann_obj_tags = list(filter(lambda s: s[0] == "_", obj_tags))
+            if ann_obj_tags:
+                # get annotation obj from register and
+                # pass it up to update the menu
+                annotation_id_tag = ann_obj_tags[0]
+
+                # get class name and id from tag
+                # e.g. "_Arrow_123"
+                _, class_name, annotation_id = annotation_id_tag.split("_")
+
+                annotation_obj = self.annotation_objects[int(annotation_id)]
+
+                annotation_menu.show_menu(annotation_obj, class_name)
+
+            # self.update_menu()
+        else:
+            # close menu
+            annotation_menu.hide_menu()
 
     def canvas_mouse_hold(self, event):
         """
@@ -301,14 +385,12 @@ class Annotator(object):
             # dont allow text boxes smaller than 25x25 pixels
             if abs(self.start_x - event.x) > 25 and abs(self.start_y - event.y) > 25:
                 new_textbox = TextBox(self.canvas, self.start_x, self.start_y,
-                                       event.x, event.y, bg="white")
-                self.annotation_ids.add(new_textbox)
+                                       event.x, event.y, bg=TEXTBOX_BG)
 
         elif current_mode == "arrow":
             self.canvas.delete(self.new_arrow_id)
-            new_arrow = Arrow(self.canvas, self.start_x, self.start_y, event.x, event.y,
+            new_arrow = Arrow(self, self.canvas, self.start_x, self.start_y, event.x, event.y,
                               fill="black", width=4)
-            self.annotation_ids.add(new_arrow.tk_id)
 
     def get_annotation_mode(self):
         """

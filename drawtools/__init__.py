@@ -10,6 +10,7 @@ dsDraw_colors = {"red": "#e74c3c",
                  "light blue": "#5dade2",
                  "purple": "#a569bd"}
 
+
 def default_font():
     """
     Written as method because in order to create a Font

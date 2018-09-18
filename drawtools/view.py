@@ -7,6 +7,8 @@ from command.bst_command import BSTInsertCommand, BSTRemoveCommand
 from collections import deque, defaultdict
 from textwrap import wrap
 from functools import partial
+from drawtools.menus import AnnotationMenu
+from drawtools.colors import *
 
 
 class ToggleButton(Button):
@@ -32,8 +34,8 @@ class ToggleButton(Button):
         else:
             self.active = not self.active
 
-        bg = "#ccc" if self.active else "#333"
-        fg = "#333" if self.active else "#ccc"
+        bg = BUTTON_ACTIVE_BG if self.active else BUTTON_ACTIVE_FG
+        fg = BUTTON_ACTIVE_FG if self.active else BUTTON_ACTIVE_BG
 
         self.configure(bg=bg, fg=fg)
 
@@ -274,6 +276,14 @@ class DrawCanvas(Canvas):
         """
         return self.parent.get_annotation_mode()
 
+    def get_root_canvas(self):
+        """
+        Hack to pass annotation info back up to root
+        because click events are only registered with the
+        topmost widget (individual canvasses at the moment)
+        """
+        return self.parent.get_root_canvas()
+
 
 class CompositeCanvas(DrawCanvas):
     """
@@ -351,6 +361,9 @@ class CompositeCanvas(DrawCanvas):
         """Ask DrawApp for annotation mode"""
         return self.parent.annotation_mode
 
+    def get_root_canvas(self):
+        return self
+
 
 class DrawApp(tk.Frame):
     def __init__(self, control, *args, **kwargs):
@@ -409,14 +422,14 @@ class DrawApp(tk.Frame):
         button to self.display()
         """
 
-        self.console_input = Entry(self, bg="white", borderwidth=0,
-                                   highlightbackground="white", highlightcolor="white",
+        self.console_input = Entry(self, bg=CONSOLE_BG, borderwidth=0,
+                                   highlightbackground=CONSOLE_BG, highlightcolor=CONSOLE_BG,
                                    font=self.mono_font)
         self.console_input.place(relwidth=0.25, relheight=0.05, relx=0.05, rely=0.9)
         self.console_input.bind("<Return>", self.command_entered)
 
         # initialize Console with reference to input
-        self.console = Console(self, self.console_input, bg="white")
+        self.console = Console(self, self.console_input, bg=CONSOLE_BG)
         self.console.place(relwidth=0.25, relheight=0.85, relx=0.05, rely=0.05)
 
         # bind up/down arrow keys to console action
@@ -424,21 +437,25 @@ class DrawApp(tk.Frame):
         self.console_input.bind("<Down>", self.console.next_command)
         self.console_input.bind("<Control-c>", self.console.clear_input)
 
-        self.canvas = CompositeCanvas(self, highlightthickness=1, highlightbackground="black", bg="#ccc")
+        self.canvas = CompositeCanvas(self, highlightthickness=1, highlightbackground="black", bg=INACTIVE_CANVAS)
         # setting canvas to fill right side of screen -
         #   60% width, offset 20% left of center,
         #   so 40% total
         self.canvas.place(relwidth=0.6, relheight=0.9, relx=0.35, rely=0.05)
 
+        # add annotation menu above main canvas, justified right
+        self.annotation_menu = AnnotationMenu(self, bg=MAIN_DARK_GRAY)
+        self.annotation_menu.place(relwidth=0.6, relheight=0.05, relx=0.35, rely=0)
+
         # add annotation buttons
         text_mode = partial(self.toggle_annotation_mode, "text")
-        self.text_annotation_button = ToggleButton(self, text="text", bg="#333", fg="white", command=text_mode)
+        self.text_annotation_button = ToggleButton(self, text="text", bg=MAIN_DARK_GRAY, fg=ACTIVE_TEXT, command=text_mode)
         self.text_annotation_button.place(relwidth=0.04, relheight=0.04, relx=0.955, rely=0.055)
         arrow_mode = partial(self.toggle_annotation_mode, "arrow")
-        self.arrow_annotation_button = ToggleButton(self, text="->", bg="#333", fg="white", command=arrow_mode)
+        self.arrow_annotation_button = ToggleButton(self, text="->", bg=MAIN_DARK_GRAY, fg=ACTIVE_TEXT, command=arrow_mode)
         self.arrow_annotation_button.place(relwidth=0.04, relheight=0.04, relx=0.955, rely=0.100)
         erase_mode = partial(self.toggle_annotation_mode, "erase")
-        self.erase_annotation_button = ToggleButton(self, text="erase", bg="#333", fg="white", command=erase_mode)
+        self.erase_annotation_button = ToggleButton(self, text="erase", bg=MAIN_DARK_GRAY, fg=ACTIVE_TEXT, command=erase_mode)
         self.erase_annotation_button.place(relwidth=0.04, relheight=0.04, relx=0.955, rely=0.145)
 
         self.annotation_buttons["text"] = self.text_annotation_button

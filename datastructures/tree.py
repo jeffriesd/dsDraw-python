@@ -3,6 +3,7 @@ from util import logging_util as log
 import logging
 from command.command_factory import BSTCommandFactory, BinaryHeapCommandFactory
 from drawtools.render import RenderTree
+from drawtools.colors import NODE_COLOR
 import random
 from copy import copy
 from datastructures.basic import DataStructure
@@ -46,7 +47,7 @@ class TreeNode(object):
         self.root_offset = 0
         self.has_thread = False
 
-        self.color = "white"
+        self.color = NODE_COLOR
 
     def __repr__(self):
         return "TreeNode(%s)" % self.value

@@ -11,6 +11,7 @@ from command.command_factory import ControlCommandFactory
 from util.exceptions import InvalidCommandError
 from command import ModelCommand
 from controller.shell import EmbeddedShell
+from drawtools.colors import *
 
 
 class DrawControl:
@@ -33,7 +34,7 @@ class DrawControl:
         # creating main view (subclass of tk.Frame)
         # and passing in data structure
         self.view = view.DrawApp(master=master, width=width, height=height,
-                                 control=self, background="#333")
+                                 control=self, background=MAIN_DARK_GRAY)
         self.view.set_logger(self.view_logger)
 
         self.logger.info("\n\n\t----- new run -----\n")
@@ -103,7 +104,7 @@ class DrawControl:
         """
         for name, render_obj in self.my_renders.items():
             render_obj.focused = (name == render) or (render_obj == render)
-            render_obj.canvas.configure(bg="#ddd" if render_obj.focused else "#aaa")
+            render_obj.canvas.configure(bg=ACTIVE_CANVAS if render_obj.focused else INACTIVE_CANVAS)
 
     def get_focused(self):
         """

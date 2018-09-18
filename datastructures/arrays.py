@@ -1,5 +1,6 @@
 from datastructures.basic import DataStructure
 from drawtools.render import RenderArray
+from drawtools.colors import NODE_COLOR
 import datastructures.interactive
 import random
 
@@ -7,7 +8,7 @@ import random
 class ArrayNode(object):
     def __init__(self, value, color=None):
         self.value = value
-        self.color = color or "white"
+        self.color = color or NODE_COLOR
 
     def __repr__(self):
         return "ArrayNode(%s)" % self.value

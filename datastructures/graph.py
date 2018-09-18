@@ -2,6 +2,7 @@ import random
 from command.command_factory import GraphCommandFactory
 from datastructures.basic import DataStructure
 from drawtools.render import RenderGraph
+from drawtools.colors import NODE_COLOR
 import datastructures.interactive
 
 
@@ -18,7 +19,7 @@ class GraphNode(object):
         # instead of deleting/redrawing every time
         self.tk_id = None
 
-        self.color = "white"
+        self.color = NODE_COLOR
 
     def __repr__(self):
         return "GraphNode(%s)" % self.value
